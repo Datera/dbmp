@@ -5,6 +5,8 @@ import io
 import json
 
 DEFAULT_PREFIX = 'DBMP'
+STORE_NAME = 'storage-1'
+VOL_NAME = 'volume-1'
 VOL_DEFAULTS = {'size': 1,
                 'prefix': DEFAULT_PREFIX,
                 'count': 1,
@@ -44,12 +46,50 @@ def parse_vol_opt(s):
         if not _is_valid(k):
             raise EnvironmentError("Volume key: {} is not valid".format(k))
         if 'max' in k:
-            opts['qos'][k] = v
+            opts['qos'][k] = int(v)
         else:
-            opts[k] = v
+            try:
+                opts[k] = int(v)
+            except (TypeError, ValueError):
+                opts[k] = v
     return opts
 
 
-def create_volumes(vopt):
+def _create_volume(api, opts, i):
+    qos = opts['qos']
+    name = opts['prefix'] + '-' + str(i)
+    ai = api.app_instances.create(name=name)
+    si = ai.storage_instances.create(name=STORE_NAME)
+    vol = si.volumes.create(
+        name=VOL_NAME,
+        replica_count=opts['replica'],
+        size=opts['size'],
+        placement_mode=opts['placement_mode'])
+    if qos:
+        vol.performance_policy.create(**qos)
+    print("Created volume:", name)
+
+
+def create_volumes(api, vopt):
+    print("Creating volumes:", vopt)
     opts = parse_vol_opt(vopt)
-    print(opts)
+    for i in range(int(opts['count'])):
+        _create_volume(api, opts, i)
+
+
+def _clean_volume(ai, opts):
+    if ai.name.startswith(opts['prefix']):
+        print("Cleaning volume:", ai.name)
+        ai.set(admin_state='offline')
+        ai.delete(force=True)
+
+
+def clean_volumes(api, vopt):
+    print("Cleaning volumes matching:", vopt)
+    opts = parse_vol_opt(vopt)
+    if 'prefix' not in opts:
+        print("No prefix specified, if all volumes should be cleaned, "
+              "use --volume name=all")
+        return
+    for ai in api.app_instances.list():
+        _clean_volume(ai, opts)
