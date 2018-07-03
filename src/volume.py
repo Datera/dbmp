@@ -17,6 +17,33 @@ VOL_DEFAULTS = {'size': 1,
                 'template': None,
                 'qos': {}}
 
+MULTI_VOL_TEMPLATE = {'name': 'app-1',
+                      'sis': [
+                          {'name': 'storage-1',
+                           'vols': [
+                               {'name': 'volume-1',
+                                'size': 1,
+                                'replica': 3,
+                                'placement_mode': 'hybrid',
+                                'qos': {}},
+                               {'name': 'volume-1',
+                                'size': 1,
+                                'replica': 3,
+                                'placement_mode': 'hybrid',
+                                'qos': {}}]},
+                          {'name': 'storage-2',
+                           'vols': [
+                               {'name': 'volume-1',
+                                'size': 1,
+                                'replica': 3,
+                                'placement_mode': 'hybrid',
+                                'qos': {}},
+                               {'name': 'volume-1',
+                                'size': 1,
+                                'replica': 3,
+                                'placement_mode': 'hybrid',
+                                'qos': {}}]}]}
+
 
 def _is_valid(k):
     if k in VOL_DEFAULTS:
@@ -75,9 +102,28 @@ def _create_volume(api, opts, i):
     print("Created volume:", name)
 
 
+def _create_complex_volume(api, opts):
+    ai = api.app_instances.create(name=opts['name'])
+    for dsi in opts['sis']:
+        si = ai.storage_instances.create(name=dsi['name'])
+        for dvol in dsi['vols']:
+            tvol = copy.deepcopy(VOL_DEFAULTS)
+            tvol.update(**dvol)
+            vol = si.volumes.create(
+                name=tvol['name'],
+                replica_count=tvol['replica'],
+                size=tvol['size'],
+                placement_mode=tvol['placement_mode'])
+            if tvol['qos']:
+                vol.performance_policy.create(**tvol['qos'])
+    print("Created complex volume:", opts['name'])
+
+
 def create_volumes(api, vopt, workers):
     print("Creating volumes:", vopt)
     opts = parse_vol_opt(vopt)
+    if 'sis' in opts:
+        return _create_complex_volume(api, opts)
     funcs, args = [], []
     for i in range(int(opts['count'])):
         funcs.append(_create_volume)
@@ -96,10 +142,11 @@ def _clean_volume(ai, opts):
 def clean_volumes(api, vopt, workers):
     print("Cleaning volumes matching:", vopt)
     opts = parse_vol_opt(vopt)
-    if 'prefix' not in opts:
-        print("No prefix specified, if all volumes should be cleaned, "
-              "use --volume name=all")
-        return
+    if 'sis' in opts:
+        opts['prefix'] = opts['name']
+    elif 'prefix' not in opts:
+        print("No prefix specified, using default, if all volumes should be "
+              "cleaned, use --volume name=all")
     funcs, args = [], []
     for ai in api.app_instances.list():
         funcs.append(_clean_volume)
