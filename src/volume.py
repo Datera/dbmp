@@ -87,7 +87,7 @@ def parse_vol_opt(s):
     return opts
 
 
-def _create_volume(api, opts, i):
+def _create_volume(api, opts, i, results):
     qos = opts['qos']
     name = opts['prefix'] + '-' + str(i)
     ai = api.app_instances.create(name=name)
@@ -100,6 +100,7 @@ def _create_volume(api, opts, i):
     if qos:
         vol.performance_policy.create(**qos)
     print("Created volume:", name)
+    results.append(ai)
 
 
 def _create_complex_volume(api, opts):
@@ -117,19 +118,21 @@ def _create_complex_volume(api, opts):
             if tvol['qos']:
                 vol.performance_policy.create(**tvol['qos'])
     print("Created complex volume:", opts['name'])
+    return ai
 
 
 def create_volumes(api, vopt, workers):
     print("Creating volumes:", vopt)
     opts = parse_vol_opt(vopt)
     if 'sis' in opts:
-        return _create_complex_volume(api, opts)
-    funcs, args = [], []
+        return [_create_complex_volume(api, opts)]
+    funcs, args, results = [], [], []
     for i in range(int(opts['count'])):
         funcs.append(_create_volume)
-        args.append((api, opts, i))
+        args.append((api, opts, i, results))
     p = Parallel(funcs, args_list=args, max_workers=workers)
     p.run_threads()
+    return results
 
 
 def _clean_volume(ai, opts):

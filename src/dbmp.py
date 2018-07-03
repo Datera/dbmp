@@ -10,6 +10,8 @@ from dfs_sdk import scaffold
 
 from volume import DEFAULT_PREFIX, create_volumes, clean_volumes
 from topology import get_topology
+from mount import mount_volumes, mount_volumes_remote, clean_mounts
+from mount import clean_mounts_remote
 
 SUCCESS = 0
 FAILURE = 1
@@ -21,17 +23,27 @@ def hf(txt):
 
 def main(args):
     api = scaffold.get_api()
-    print('Using Config:')
     get_topology(args.host, args.topology_file)
+    print('Using Config:')
     scaffold.print_config()
 
     if args.clean:
+        if args.host == 'local':
+            clean_mounts()
+        else:
+            clean_mounts_remote(args.host)
         for vol in args.volume:
             clean_volumes(api, vol, args.workers)
         return SUCCESS
 
+    vols = None
     for vol in args.volume:
-        create_volumes(api, vol, args.workers)
+        vols = create_volumes(api, vol, args.workers)
+
+    if args.mount and vols and args.host == 'local':
+        mount_volumes(api, vols, not args.no_multipath)
+    elif args.mount and vols and args.host != 'local':
+        mount_volumes_remote(args.host, vols, not args.no_multipath)
     return SUCCESS
 
 
@@ -65,5 +77,6 @@ if __name__ == '__main__':
                         help='Clean instead of create')
     parser.add_argument('-w', '--workers', default=5,
                         help='Number of worker threads for this action')
+    parser.add_argument('-n', '--no-multipath', action='store_true')
     args = parser.parse_args()
     sys.exit(main(args))

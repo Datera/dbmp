@@ -1,14 +1,16 @@
 from __future__ import (unicode_literals, print_function, absolute_import,
                         division)
 
-import sys
-import threading
+from itertools import izip_longest
+# Py2-3 compatibility
 try:
     import queue
 except ImportError:
     import Queue as queue
+import subprocess
+import sys
+import threading
 from time import sleep
-from itertools import izip_longest
 
 import logging
 
@@ -134,3 +136,14 @@ class Parallel(object):
                 raise exc[0], exc[1], exc[2]
             except queue.Empty:
                 pass
+
+
+def exe(cmd, fail_ok=False):
+    print("Running command:", cmd)
+    try:
+        return subprocess.check_output(cmd, shell=True)
+    except subprocess.CalledProcessError as e:
+        if fail_ok:
+            print(e)
+            return None
+        raise
