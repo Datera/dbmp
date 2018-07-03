@@ -27,11 +27,11 @@ def main(args):
 
     if args.clean:
         for vol in args.volume:
-            clean_volumes(api, vol)
+            clean_volumes(api, vol, args.workers)
         return SUCCESS
 
     for vol in args.volume:
-        create_volumes(api, vol)
+        create_volumes(api, vol, args.workers)
     return SUCCESS
 
 
@@ -63,5 +63,7 @@ if __name__ == '__main__':
                         help='Mount volumes')
     parser.add_argument('-c', '--clean', action='store_true',
                         help='Clean instead of create')
+    parser.add_argument('-w', '--workers', default=5,
+                        help='Number of worker threads for this action')
     args = parser.parse_args()
     sys.exit(main(args))

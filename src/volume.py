@@ -4,6 +4,8 @@ import copy
 import io
 import json
 
+from utils import Parallel
+
 DEFAULT_PREFIX = 'DBMP'
 STORE_NAME = 'storage-1'
 VOL_NAME = 'volume-1'
@@ -70,11 +72,15 @@ def _create_volume(api, opts, i):
     print("Created volume:", name)
 
 
-def create_volumes(api, vopt):
+def create_volumes(api, vopt, workers):
     print("Creating volumes:", vopt)
     opts = parse_vol_opt(vopt)
+    funcs, args = [], []
     for i in range(int(opts['count'])):
-        _create_volume(api, opts, i)
+        funcs.append(_create_volume)
+        args.append((api, opts, i))
+    p = Parallel(funcs, args_list=args, max_workers=workers)
+    p.run_threads()
 
 
 def _clean_volume(ai, opts):
@@ -84,12 +90,16 @@ def _clean_volume(ai, opts):
         ai.delete(force=True)
 
 
-def clean_volumes(api, vopt):
+def clean_volumes(api, vopt, workers):
     print("Cleaning volumes matching:", vopt)
     opts = parse_vol_opt(vopt)
     if 'prefix' not in opts:
         print("No prefix specified, if all volumes should be cleaned, "
               "use --volume name=all")
         return
+    funcs, args = [], []
     for ai in api.app_instances.list():
-        _clean_volume(ai, opts)
+        funcs.append(_clean_volume)
+        args.append((ai, opts))
+    p = Parallel(funcs, args_list=args, max_workers=workers)
+    p.run_threads()
