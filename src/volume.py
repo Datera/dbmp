@@ -38,11 +38,14 @@ def read_vol_opts(ifile):
 
 def parse_vol_opt(s):
     parts = s.split(',')
-    if len(parts) == 1 and '=' not in parts[0]:
-        return read_vol_opts(parts[0])
-    elif len(parts) < 1:
-        return copy.deepcopy(VOL_DEFAULTS)
     opts = copy.deepcopy(VOL_DEFAULTS)
+    if len(parts) == 1 and '=' not in parts[0]:
+        ropts = read_vol_opts(parts[0])
+        for k, v in ropts.items():
+            opts[k] = v
+        return opts
+    elif len(parts) < 1:
+        return opts
     for p in parts:
         k, v = p.split('=')
         if not _is_valid(k):
