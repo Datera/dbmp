@@ -87,6 +87,17 @@ def parse_vol_opt(s):
     return opts
 
 
+def ais_from_vols(api, vols):
+    ais = []
+    opts = parse_vol_opt(vols)
+    if 'sis' in opts:
+        ais.append(api.app_instance.get(opts['name']))
+    for i in range(opts['count']):
+        ai = api.app_instances.get(opts['prefix'] + '-' + str(i))
+        ais.append(ai)
+    return ais
+
+
 def _create_volume(api, opts, i, results):
     qos = opts['qos']
     name = opts['prefix'] + '-' + str(i)
@@ -138,7 +149,7 @@ def create_volumes(api, vopt, workers):
 def _clean_volume(ai, opts):
     if ai.name.startswith(opts['prefix']):
         print("Cleaning volume:", ai.name)
-        ai.set(admin_state='offline')
+        ai.set(admin_state='offline', force=True)
         ai.delete(force=True)
 
 

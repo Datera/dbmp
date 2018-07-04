@@ -29,7 +29,8 @@ def main(args):
 
     if args.clean:
         if args.host == 'local':
-            clean_mounts()
+            for vol in args.volume:
+                clean_mounts(api, vol, args.workers)
         else:
             clean_mounts_remote(args.host)
         for vol in args.volume:
@@ -41,9 +42,11 @@ def main(args):
         vols = create_volumes(api, vol, args.workers)
 
     if args.mount and vols and args.host == 'local':
-        mount_volumes(api, vols, not args.no_multipath)
+        mount_volumes(api, vols, not args.no_multipath, args.fstype,
+                      args.directory, args.workers)
     elif args.mount and vols and args.host != 'local':
-        mount_volumes_remote(args.host, vols, not args.no_multipath)
+        mount_volumes_remote(args.host, vols, not args.no_multipath,
+                             args.fstype, args.directory, args.workers)
     return SUCCESS
 
 
@@ -78,5 +81,9 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--workers', default=5,
                         help='Number of worker threads for this action')
     parser.add_argument('-n', '--no-multipath', action='store_true')
+    parser.add_argument('-f', '--fstype', default='ext4',
+                        help='Filesystem to use when formatting devices')
+    parser.add_argument('-d', '--directory', default='/mnt',
+                        help='Directory under which to mount devices')
     args = parser.parse_args()
     sys.exit(main(args))

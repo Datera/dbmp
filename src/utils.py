@@ -146,4 +146,5 @@ def exe(cmd, fail_ok=False):
         if fail_ok:
             print(e)
             return None
-        raise
+        raise EnvironmentError(
+            "Encountered error running command: {}, error : {}".format(cmd, e))
