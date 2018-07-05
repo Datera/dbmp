@@ -14,34 +14,40 @@ DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
 
 def clean_mounts(api, vols, directory, workers):
     ais = ais_from_vols(api, vols)
+    funcs, args = [], []
     for ai in ais:
         for si in ai.storage_instances.list():
             iqn = si.access['iqn']
             portals = si.access['ips']
             for vol in si.volumes.list():
                 _unmount(ai.name, si.name, vol.name, directory)
-            _logout(iqn, portals)
+            funcs.append(_logout)
+            args.append((iqn, portals))
+    if funcs:
+        p = Parallel(funcs, args_list=args)
+        p.run_threads()
 
 
 def _unmount(ai_name, si_name, vol_name, directory):
     name = "-".join((ai_name, si_name, vol_name))
     folder = os.path.join(directory, name)
-    exe("sudo umount {}".format(folder))
+    try:
+        exe("sudo umount {}".format(folder))
+    except EnvironmentError as e:
+        print(e)
+        return
     exe("sudo rmdir {}".format(folder))
 
 
-def clean_mounts_remote(host):
+def clean_mounts_remote(host, vols, directory, workers):
     pass
 
 
 def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers):
     funcs, args = [], []
     for ai in vols:
-        if len(ai.storage_instances.list()) > 1:
-            _mount_complex_volume(ai, multipath)
-        else:
-            funcs.append(_mount_volume)
-            args.append((api, ai, multipath, fs, fsargs, directory))
+        funcs.append(_mount_volume)
+        args.append((api, ai, multipath, fs, fsargs, directory))
     if funcs:
         p = Parallel(funcs, args_list=args, max_workers=workers)
         p.run_threads()
@@ -51,22 +57,18 @@ def mount_volumes_remote(host, vols, multipath):
     pass
 
 
-def _mount_complex_volume(ai, multipath):
-    pass
-
-
 def _mount_volume(api, ai, multipath, fs, fsargs, directory):
     _setup_acl(api, ai)
     ai.set(admin_state='online')
-    si = ai.storage_instances.list()[0]
-    _si_poll(si)
-    si = si.reload()
-    ac = si.access
-    path = _login(ac['iqn'], ac['ips'], multipath)
-    print("Volume device path:", path)
-    vol = si.volumes.list()[0]
-    name = "-".join((ai.name, si.name, vol.name))
-    _format_mount_device(path, fs, fsargs, name, directory)
+    for si in ai.storage_instances.list():
+        _si_poll(si)
+        si = si.reload()
+        ac = si.access
+        for i, vol in enumerate(si.volumes.list()):
+            path = _login(ac['iqn'], ac['ips'], multipath, i)
+            print("Volume device path:", path)
+            name = "-".join((ai.name, si.name, vol.name))
+            _format_mount_device(path, fs, fsargs, name, directory)
 
 
 def _format_mount_device(path, fs, fsargs, name, directory):
@@ -156,28 +158,29 @@ def _get_multipath_disk(path):
             path, device_path))
 
 
-def _login(iqn, portals, multipath):
+def _login(iqn, portals, multipath, lun):
     retries = 10
     if not multipath:
         portals = [portals[0]]
-    for portal in portals:
-        while True:
-            print("Trying to log into target:", portal)
-            try:
-                exe("sudo iscsiadm -m discovery -t st -p {}:3260".format(
-                    portal))
-                exe("sudo iscsiadm -m node -T {iqn} -p {ip}:3260 "
-                    "--login".format(iqn=iqn, ip=portal))
-                break
-            except EnvironmentError:
-                retries -= 1
-                if not retries:
-                    print("Could not log into portal before end of polling "
-                          "period")
-                    raise
-                print("Failed to login to portal, retrying")
-                time.sleep(2)
-    path = DEV_TEMPLATE.format(ip=portals[0], iqn=iqn, lun=0)
+    if lun == 0:
+        for portal in portals:
+            while True:
+                print("Trying to log into target:", portal)
+                try:
+                    exe("sudo iscsiadm -m discovery -t st -p {}:3260".format(
+                        portal))
+                    exe("sudo iscsiadm -m node -T {iqn} -p {ip}:3260 "
+                        "--login".format(iqn=iqn, ip=portal))
+                    break
+                except EnvironmentError:
+                    retries -= 1
+                    if not retries:
+                        print("Could not log into portal before end of "
+                              "polling period")
+                        raise
+                    print("Failed to login to portal, retrying")
+                    time.sleep(2)
+    path = DEV_TEMPLATE.format(ip=portals[0], iqn=iqn, lun=lun)
     if multipath:
         dpath = _get_multipath_disk(path)
     else:
