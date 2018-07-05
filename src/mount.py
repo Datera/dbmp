@@ -12,27 +12,36 @@ from utils import Parallel, exe
 DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
 
 
-def clean_mounts(api, vols, workers):
+def clean_mounts(api, vols, directory, workers):
     ais = ais_from_vols(api, vols)
     for ai in ais:
         for si in ai.storage_instances.list():
             iqn = si.access['iqn']
             portals = si.access['ips']
+            for vol in si.volumes.list():
+                _unmount(ai.name, si.name, vol.name, directory)
             _logout(iqn, portals)
+
+
+def _unmount(ai_name, si_name, vol_name, directory):
+    name = "-".join((ai_name, si_name, vol_name))
+    folder = os.path.join(directory, name)
+    exe("sudo umount {}".format(folder))
+    exe("sudo rmdir {}".format(folder))
 
 
 def clean_mounts_remote(host):
     pass
 
 
-def mount_volumes(api, vols, multipath, fs, directory, workers):
+def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers):
     funcs, args = [], []
     for ai in vols:
         if len(ai.storage_instances.list()) > 1:
             _mount_complex_volume(ai, multipath)
         else:
             funcs.append(_mount_volume)
-            args.append((api, ai, multipath, fs, directory))
+            args.append((api, ai, multipath, fs, fsargs, directory))
     if funcs:
         p = Parallel(funcs, args_list=args, max_workers=workers)
         p.run_threads()
@@ -46,7 +55,7 @@ def _mount_complex_volume(ai, multipath):
     pass
 
 
-def _mount_volume(api, ai, multipath, fs, directory):
+def _mount_volume(api, ai, multipath, fs, fsargs, directory):
     _setup_acl(api, ai)
     ai.set(admin_state='online')
     si = ai.storage_instances.list()[0]
@@ -56,13 +65,23 @@ def _mount_volume(api, ai, multipath, fs, directory):
     path = _login(ac['iqn'], ac['ips'], multipath)
     print("Volume device path:", path)
     vol = si.volumes.list()[0]
-    name = "-".join(ai.name, si.name, vol.name)
-    _format_mount_device(path, fs, name, directory)
+    name = "-".join((ai.name, si.name, vol.name))
+    _format_mount_device(path, fs, fsargs, name, directory)
 
 
-def _format_mount_device(path, fs, name, directory):
+def _format_mount_device(path, fs, fsargs, name, directory):
     folder = os.path.join(directory, name)
-    exe("sudo mkfs.{}".format(fs))
+    timeout = 5
+    while True:
+        try:
+            exe("sudo mkfs.{} {} {} ".format(fs, fsargs, path))
+            break
+        except EnvironmentError:
+            print("Failed to format {}. Waiting for device to be ready".format(
+                path))
+            time.sleep(1)
+            timeout -= 1
+    exe("sudo mkdir -p /{}".format(folder.strip("/")))
     exe("sudo mount {} {}".format(path, folder))
 
 

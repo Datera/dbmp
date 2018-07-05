@@ -30,7 +30,7 @@ def main(args):
     if args.clean:
         if args.host == 'local':
             for vol in args.volume:
-                clean_mounts(api, vol, args.workers)
+                clean_mounts(api, vol, args.directory, args.workers)
         else:
             clean_mounts_remote(args.host)
         for vol in args.volume:
@@ -43,10 +43,11 @@ def main(args):
 
     if args.mount and vols and args.host == 'local':
         mount_volumes(api, vols, not args.no_multipath, args.fstype,
-                      args.directory, args.workers)
+                      args.fsargs, args.directory, args.workers)
     elif args.mount and vols and args.host != 'local':
         mount_volumes_remote(args.host, vols, not args.no_multipath,
-                             args.fstype, args.directory, args.workers)
+                             args.fstype, args.fsargs, args.directory,
+                             args.workers)
     return SUCCESS
 
 
@@ -81,8 +82,12 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--workers', default=5,
                         help='Number of worker threads for this action')
     parser.add_argument('-n', '--no-multipath', action='store_true')
-    parser.add_argument('-f', '--fstype', default='ext4',
+    parser.add_argument('-f', '--fstype', default='xfs',
                         help='Filesystem to use when formatting devices')
+    parser.add_argument('-a', '--fsargs', default='',
+                        help='Extra args to give formatter, eg "-E '
+                             'lazy_table_init=1".  Make sure fstype matches '
+                             'the args you are passing in')
     parser.add_argument('-d', '--directory', default='/mnt',
                         help='Directory under which to mount devices')
     args = parser.parse_args()

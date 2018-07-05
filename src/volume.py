@@ -4,6 +4,8 @@ import copy
 import io
 import json
 
+from dfs_sdk import exceptions as dat_exceptions
+
 from utils import Parallel
 
 DEFAULT_PREFIX = 'DBMP'
@@ -91,10 +93,19 @@ def ais_from_vols(api, vols):
     ais = []
     opts = parse_vol_opt(vols)
     if 'sis' in opts:
-        ais.append(api.app_instance.get(opts['name']))
+        try:
+            ais.append(api.app_instance.get(opts['name']))
+        except dat_exceptions.ApiNotFoundError:
+            print("No app_instance found matching prefix: {}".format(
+                opts['prefix']))
     for i in range(opts['count']):
-        ai = api.app_instances.get(opts['prefix'] + '-' + str(i))
-        ais.append(ai)
+        try:
+            ai = api.app_instances.get(opts['prefix'] + '-' + str(i))
+            ais.append(ai)
+        except dat_exceptions.ApiNotFoundError:
+            print("No app_instance found matching prefix: {}".format(
+                opts['prefix']))
+            break
     return ais
 
 
