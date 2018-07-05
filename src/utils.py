@@ -1,7 +1,6 @@
 from __future__ import (unicode_literals, print_function, absolute_import,
                         division)
 
-from itertools import izip_longest
 # Py2-3 compatibility
 try:
     import queue
@@ -13,6 +12,9 @@ import threading
 from time import sleep
 
 import logging
+
+from six import reraise as raise_
+from six.moves import zip_longest
 
 
 class Parallel(object):
@@ -88,7 +90,7 @@ class Parallel(object):
         running until all args/kwargs are consumed.  This is a blocking call.
         """
         try:
-            for func, args, kwargs in izip_longest(
+            for func, args, kwargs in zip_longest(
                     self.funcs, self.args_list, self.kwargs_list,
                     fillvalue={}):
                 # Flag a common (and confusing) user error:
@@ -117,7 +119,7 @@ class Parallel(object):
                 try:
                     exc = self.exceptions.get(block=False)
                     self.keep_running = False
-                    raise exc[0], exc[1], exc[2]
+                    raise_(*exc)
                 except queue.Empty:
                     pass
                 sleep(0.2)
@@ -133,7 +135,7 @@ class Parallel(object):
                 # without all threads stopping
                 for thread in self.threads:
                     thread.join(self.timeout)
-                raise exc[0], exc[1], exc[2]
+                raise_(*exc)
             except queue.Empty:
                 pass
 
