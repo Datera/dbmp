@@ -24,6 +24,6 @@ def main(args):
 if __name__ == '__main__':
     parser = scaffold.get_argparser()
     parser.add_argument('--vols')
-    parser.add_argument('--workers')
+    parser.add_argument('--workers', type=int)
     args = parser.parse_args()
     sys.exit(main(args))

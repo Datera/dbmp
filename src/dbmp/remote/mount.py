@@ -29,6 +29,6 @@ if __name__ == '__main__':
     parser.add_argument('--fs')
     parser.add_argument('--fsargs')
     parser.add_argument('--directory')
-    parser.add_argument('--workers')
+    parser.add_argument('--workers', type=int)
     args = parser.parse_args()
     sys.exit(main(args))

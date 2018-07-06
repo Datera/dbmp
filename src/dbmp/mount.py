@@ -16,7 +16,7 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
                          workers):
     check_install(host)
     m = '--multipath' if multipath else ''
-    vs = ','.join([v.path for v in vols])
+    vs = ','.join([v.name for v in vols])
     exe_remote_py(
         host,
         'mount.py '
@@ -30,12 +30,13 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
 
 def clean_mounts_remote(host, vols, directory, workers):
     check_install(host)
+    vs = ','.join([v.name for v in vols])
     exe_remote_py(
         host,
         'clean_mount.py '
         '--vols {} '
         '--directory {} '
-        '--workers {}'.format(vols, directory, workers))
+        '--workers {}'.format(vs, directory, workers))
 
 
 def clean_mounts(api, vols, directory, workers):
@@ -43,7 +44,9 @@ def clean_mounts(api, vols, directory, workers):
     funcs, args = [], []
     for ai in ais:
         for si in ai.storage_instances.list():
-            iqn = si.access['iqn']
+            iqn = si.access.get('iqn')
+            if not iqn:
+                continue
             portals = si.access['ips']
             for vol in si.volumes.list():
                 _unmount(ai.name, si.name, vol.name, directory)
