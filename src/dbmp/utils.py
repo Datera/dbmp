@@ -198,7 +198,7 @@ def exe_remote(host, cmd, fail_ok=False):
 
 
 def exe_remote_py(host, cmd):
-    prefix = '~/dbmp/.dbmp/bin/python ~/dbmp/src/remote/{}'
+    prefix = 'cd ~/dbmp/src && ~/dbmp/.dbmp/bin/python ~/dbmp/src/remote/{}'
     return exe_remote(host, prefix.format(cmd))
 
 
