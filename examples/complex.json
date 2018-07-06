@@ -1,0 +1,31 @@
+{
+    "name": "complex-app",
+    "sis": [
+        {"name": "storage-1",
+         "vols": [
+             {"name": "volume-1",
+              "size": 5,
+              "replica": 1,
+              "placement_mode": "hybrid",
+              "qos": {}},
+             {"name": "volume-2",
+              "size": 10,
+              "replica": 1,
+              "placement_mode": "hybrid",
+              "qos": {}}
+         ]},
+        {"name": "storage-2",
+         "vols": [
+             {"name": "volume-3",
+              "size": 15,
+              "replica": 1,
+              "placement_mode": "hybrid",
+              "qos": {"total_iops_max": 300}},
+             {"name": "volume-4",
+              "size": 20,
+              "replica": 1,
+              "placement_mode": "hybrid",
+              "qos": {"total_iops_max": 500}}
+         ]}
+    ]
+}
