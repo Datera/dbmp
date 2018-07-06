@@ -91,7 +91,12 @@ def parse_vol_opt(s):
 
 def ais_from_vols(api, vols):
     ais = []
-    opts = parse_vol_opt(vols)
+    try:
+        opts = parse_vol_opt(vols)
+    except Exception:
+        for name in vols.split(','):
+            ais.append(api.app_instances.get(name))
+        return ais
     if 'sis' in opts:
         try:
             ais.append(api.app_instances.get(opts['name']))

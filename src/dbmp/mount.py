@@ -17,15 +17,16 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
     check_install(host)
     m = '--multipath' if multipath else ''
     vs = ','.join([v.name for v in vols])
+    fa = '"{}"'.format(fsargs)
     exe_remote_py(
         host,
         'mount.py '
         '--vols {} '
         '{} '
-        '--fs {}'
+        '--fs {} '
         '--fsargs {}'
         '--directory {} '
-        '--workers {}'.format(vs, m, fs, fsargs, directory, workers))
+        '--workers {}'.format(vs, m, fs, fa, directory, workers))
 
 
 def clean_mounts_remote(host, vols, directory, workers):
