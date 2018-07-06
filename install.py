@@ -15,7 +15,7 @@ PYTHON = os.path.join(VENV, "bin", "python")
 PIP = os.path.join(VENV, "bin", "pip")
 REQUIREMENTS = os.path.join(DIR, "requirements.txt")
 DBMP = os.path.join(DIR, "dbmp")
-DBMPPY = os.path.join(DIR, "src", "dbmp", "dbmp.py")
+DBMPPY = os.path.join(DIR, "src", "dbmp", "main.py")
 CONFIG = os.path.join(DIR, "datera-config.json")
 DBMP_TEMPLATE = """
 #!/bin/bash

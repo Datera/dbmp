@@ -3,5 +3,4 @@ paramiko
 requests
 six
 tabulate
-os-brick
 git+http://github.com/Datera/python-sdk
