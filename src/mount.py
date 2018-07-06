@@ -16,6 +16,7 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
                          workers):
     check_install(host)
     m = '--multipath' if multipath else ''
+    vs = ','.join([v.path for v in vols])
     exe_remote_py(
         host,
         'mount.py '
@@ -24,7 +25,7 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
         '--fs {}'
         '--fsargs {}'
         '--directory {} '
-        '--workers {}'.format(vols, m, fs, fsargs, directory, workers))
+        '--workers {}'.format(vs, m, fs, fsargs, directory, workers))
 
 
 def clean_mounts_remote(host, vols, directory, workers):

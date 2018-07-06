@@ -56,6 +56,7 @@ def main(args):
     except subprocess.CalledProcessError:
         # Install prereqs Ubuntu
         try:
+            exe("sudo apt-get update")
             exe("sudo apt-get install python-virtualenv python-dev "
                 "libffi-dev libssl-dev -y")
         # Install prereqs Centos

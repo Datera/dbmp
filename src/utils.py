@@ -185,21 +185,21 @@ def exe_remote(host, cmd, fail_ok=False):
     exit_status = stdout.channel.recv_exit_status()
     result = None
     if int(exit_status) == 0:
-        result = stdout.read()
+        result = stdout.read().decode('utf-8')
     elif fail_ok:
-        result = stderr.read()
+        result = stderr.read().decode('utf-8')
     else:
         raise EnvironmentError(
             "Nonzero return code: {} stderr: {}".format(
                 exit_status,
-                stderr.read()))
+                stderr.read().decode('utf-8')))
     ssh.close()
     return result
 
 
 def exe_remote_py(host, cmd):
     prefix = '~/dbmp/.dbmp/bin/python ~/dbmp/src/remote/{}'
-    return exe_remote(prefix.format(cmd))
+    return exe_remote(host, prefix.format(cmd))
 
 
 def check_install(host):
@@ -211,11 +211,13 @@ def check_install(host):
         config = scaffold.get_config()
         tf.write(json.dumps(config))
         tf.flush()
-        putf_remote(tf.name, '~/dbmp/datera-config.json')
+        user, _, _ = get_topology(host)
+        putf_remote(host, tf.name,
+                    '/home/{}/datera-config.json'.format(user))
 
 
-def putf_remote(host, file):
+def putf_remote(host, local, file):
     ssh = get_ssh(host)
-    sftp = ssh.get_sftp()
-    sftp.put(file, file)
+    sftp = ssh.open_sftp()
+    sftp.put(local, file)
     sftp.close()

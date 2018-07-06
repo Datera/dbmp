@@ -14,6 +14,9 @@ def main(args):
     api = scaffold.get_api()
     print('Using Config:')
     scaffold.print_config()
+    ais = []
+    for v in args.vols.split(','):
+        ais.append(api.app_instances.get(v))
     mount_volumes(api, args.vols, args.multipath, args.fs, args.fsargs,
                   args.directory, args.workers)
     return SUCCESS
