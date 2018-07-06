@@ -1,20 +1,28 @@
 from __future__ import (unicode_literals, print_function, absolute_import,
                         division)
 
+import logging
+import json
 # Py2-3 compatibility
 try:
     import queue
 except ImportError:
     import Queue as queue
+import os
 import subprocess
 import sys
+import tempfile
 import threading
 from time import sleep
 
-import logging
-
 from six import reraise as raise_
 from six.moves import zip_longest
+import paramiko
+from dfs_sdk import scaffold
+
+from topology import get_topology
+
+DBMP_REPO = 'http://github.com/Datera/dbmp'
 
 
 class Parallel(object):
@@ -150,3 +158,64 @@ def exe(cmd, fail_ok=False):
             return None
         raise EnvironmentError(
             "Encountered error running command: {}, error : {}".format(cmd, e))
+
+
+def get_ssh(host):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(
+        paramiko.AutoAddPolicy())
+    user, ip, creds = get_topology(host)
+    if os.path.exists(creds):
+        ssh.connect(hostname=ip,
+                    username=user,
+                    banner_timeout=60,
+                    pkey=paramiko.RSAKey.from_private_key_file(creds))
+    else:
+        ssh.connect(hostname=ip,
+                    username=user,
+                    password=creds,
+                    banner_timeout=60)
+    return ssh
+
+
+def exe_remote(host, cmd, fail_ok=False):
+    print("Running remote command {} on host {}:".format(cmd, host))
+    ssh = get_ssh(host)
+    _, stdout, stderr = ssh.exec_command(cmd)
+    exit_status = stdout.channel.recv_exit_status()
+    result = None
+    if int(exit_status) == 0:
+        result = stdout.read()
+    elif fail_ok:
+        result = stderr.read()
+    else:
+        raise EnvironmentError(
+            "Nonzero return code: {} stderr: {}".format(
+                exit_status,
+                stderr.read()))
+    ssh.close()
+    return result
+
+
+def exe_remote_py(host, cmd):
+    prefix = '~/dbmp/.dbmp/bin/python ~/dbmp/src/remote/{}'
+    return exe_remote(prefix.format(cmd))
+
+
+def check_install(host):
+    try:
+        exe_remote(host, 'test -d ~/dbmp')
+    except EnvironmentError:
+        exe_remote(host, 'git clone {} && ~/dbmp/install.py'.format(DBMP_REPO))
+    with tempfile.NamedTemporaryFile() as tf:
+        config = scaffold.get_config()
+        tf.write(json.dumps(config))
+        tf.flush()
+        putf_remote(tf.name, '~/dbmp/datera-config.json')
+
+
+def putf_remote(host, file):
+    ssh = get_ssh(host)
+    sftp = ssh.get_sftp()
+    sftp.put(file, file)
+    sftp.close()

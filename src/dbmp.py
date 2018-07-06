@@ -9,7 +9,6 @@ import textwrap
 from dfs_sdk import scaffold
 
 from volume import DEFAULT_PREFIX, create_volumes, clean_volumes
-from topology import get_topology
 from mount import mount_volumes, mount_volumes_remote, clean_mounts
 from mount import clean_mounts_remote
 
@@ -23,16 +22,16 @@ def hf(txt):
 
 def main(args):
     api = scaffold.get_api()
-    get_topology(args.host, args.topology_file)
     print('Using Config:')
     scaffold.print_config()
 
     if args.clean:
-        if args.host == 'local':
-            for vol in args.volume:
+        for vol in args.volume:
+            if args.run_host == 'local':
                 clean_mounts(api, vol, args.directory, args.workers)
-        else:
-            clean_mounts_remote(args.host)
+            else:
+                clean_mounts_remote(
+                    args.run_host, vol, args.directory, args.workers)
         for vol in args.volume:
             clean_volumes(api, vol, args.workers)
         return SUCCESS
@@ -41,11 +40,11 @@ def main(args):
     for vol in args.volume:
         vols = create_volumes(api, vol, args.workers)
 
-    if args.mount and vols and args.host == 'local':
+    if args.mount and vols and args.run_host == 'local':
         mount_volumes(api, vols, not args.no_multipath, args.fstype,
                       args.fsargs, args.directory, args.workers)
-    elif args.mount and vols and args.host != 'local':
-        mount_volumes_remote(args.host, vols, not args.no_multipath,
+    elif args.mount and vols and args.run_host != 'local':
+        mount_volumes_remote(args.run_host, vols, not args.no_multipath,
                              args.fstype, args.fsargs, args.directory,
                              args.workers)
     return SUCCESS
@@ -55,12 +54,11 @@ if __name__ == '__main__':
     tparser = scaffold.get_argparser(add_help=False)
     parser = argparse.ArgumentParser(
         parents=[tparser], formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-s', '--host', default='local',
+    parser.add_argument('-s', '--run-host', default='local',
                         help=hf('Host on which targets should be logged in.'
                                 ' This value will be a key in your '
                                 '"dbmp-topology.json" file. Use "local" for'
                                 'the current host'))
-    parser.add_argument('-t', '--topology-file', default='dbmp-topology.json')
     parser.add_argument('--volume', action='append', default=[],
                         help='Supports the following comma separated params:\n'
                              ' \n'

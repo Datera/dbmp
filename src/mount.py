@@ -7,9 +7,34 @@ import time
 from dfs_sdk import exceptions as dat_exceptions
 
 from volume import ais_from_vols
-from utils import Parallel, exe
+from utils import Parallel, exe, check_install, exe_remote_py
 
 DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
+
+
+def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
+                         workers):
+    check_install(host)
+    m = '--multipath' if multipath else ''
+    exe_remote_py(
+        host,
+        'mount.py '
+        '--vols {} '
+        '{} '
+        '--fs {}'
+        '--fsargs {}'
+        '--directory {} '
+        '--workers {}'.format(vols, m, fs, fsargs, directory, workers))
+
+
+def clean_mounts_remote(host, vols, directory, workers):
+    check_install(host)
+    exe_remote_py(
+        host,
+        'clean_mount.py '
+        '--vols {} '
+        '--directory {} '
+        '--workers {}'.format(vols, directory, workers))
 
 
 def clean_mounts(api, vols, directory, workers):
@@ -39,10 +64,6 @@ def _unmount(ai_name, si_name, vol_name, directory):
     exe("sudo rmdir {}".format(folder))
 
 
-def clean_mounts_remote(host, vols, directory, workers):
-    pass
-
-
 def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers):
     funcs, args = [], []
     for ai in vols:
@@ -51,10 +72,6 @@ def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers):
     if funcs:
         p = Parallel(funcs, args_list=args, max_workers=workers)
         p.run_threads()
-
-
-def mount_volumes_remote(host, vols, multipath):
-    pass
 
 
 def _mount_volume(api, ai, multipath, fs, fsargs, directory):
