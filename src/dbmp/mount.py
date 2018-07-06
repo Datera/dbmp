@@ -6,8 +6,8 @@ import time
 
 from dfs_sdk import exceptions as dat_exceptions
 
-from volume import ais_from_vols
-from utils import Parallel, exe, check_install, exe_remote_py
+from dbmp.volume import ais_from_vols
+from dbmp.utils import Parallel, exe, check_install, exe_remote_py
 
 DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
 

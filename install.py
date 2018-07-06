@@ -75,6 +75,7 @@ def main(args):
         exe("virtualenv {}".format(VENV))
     exe_pip("install -U pip")
     exe_pip("install -U -r {}".format(REQUIREMENTS))
+    exe_pip("install -e {}".format(DIR))
 
     if not os.path.isfile(DBMP):
         # Create dbmp executable

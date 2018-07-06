@@ -8,9 +8,9 @@ import textwrap
 
 from dfs_sdk import scaffold
 
-from volume import DEFAULT_PREFIX, create_volumes, clean_volumes
-from mount import mount_volumes, mount_volumes_remote, clean_mounts
-from mount import clean_mounts_remote
+from dbmp.volume import DEFAULT_PREFIX, create_volumes, clean_volumes
+from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
+from dbmp.mount import clean_mounts_remote
 
 SUCCESS = 0
 FAILURE = 1
@@ -83,9 +83,9 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--fstype', default='xfs',
                         help='Filesystem to use when formatting devices')
     parser.add_argument('-a', '--fsargs', default='',
-                        help='Extra args to give formatter, eg "-E '
-                             'lazy_table_init=1".  Make sure fstype matches '
-                             'the args you are passing in')
+                        help=hf('Extra args to give formatter, eg "-E '
+                                'lazy_table_init=1".  Make sure fstype matches'
+                                ' the args you are passing in'))
     parser.add_argument('-d', '--directory', default='/mnt',
                         help='Directory under which to mount devices')
     args = parser.parse_args()

@@ -6,7 +6,7 @@ import json
 
 from dfs_sdk import exceptions as dat_exceptions
 
-from utils import Parallel
+from dbmp.utils import Parallel
 
 DEFAULT_PREFIX = 'DBMP'
 STORE_NAME = 'storage-1'

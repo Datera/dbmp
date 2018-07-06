@@ -20,7 +20,7 @@ from six.moves import zip_longest
 import paramiko
 from dfs_sdk import scaffold
 
-from topology import get_topology
+from dbmp.topology import get_topology
 
 DBMP_REPO = 'http://github.com/Datera/dbmp'
 
