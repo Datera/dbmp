@@ -63,7 +63,7 @@ def main(args):
     elif args.fio and args.run_host == 'local':
         run_fio(vols, args.fio_workload, args.directory)
     elif args.fio and args.run_host != 'local':
-        run_fio_remote(vols, args.fio_workload, args.directory)
+        run_fio_remote(args.run_host, vols, args.fio_workload, args.directory)
     return SUCCESS
 
 

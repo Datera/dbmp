@@ -31,13 +31,12 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
 
 def clean_mounts_remote(host, vols, directory, workers):
     check_install(host)
-    vs = ','.join([v.name for v in vols])
     exe_remote_py(
         host,
         'clean_mount.py '
         '--vols {} '
         '--directory {} '
-        '--workers {}'.format(vs, directory, workers))
+        '--workers {}'.format(vols, directory, workers))
 
 
 def clean_mounts(api, vols, directory, workers):

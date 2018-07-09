@@ -95,7 +95,10 @@ def ais_from_vols(api, vols):
         opts = parse_vol_opt(vols)
     except Exception:
         for name in vols.split(','):
-            ais.append(api.app_instances.get(name))
+            try:
+                ais.append(api.app_instances.get(name))
+            except dat_exceptions.ApiNotFoundError:
+                print("No app_instance found matching name: {}".format(name))
         return ais
     if 'sis' in opts:
         try:

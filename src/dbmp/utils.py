@@ -9,6 +9,8 @@ try:
 except ImportError:
     import Queue as queue
 import os
+import random
+import string
 import subprocess
 import sys
 import tempfile
@@ -223,5 +225,13 @@ def check_install(host):
 def putf_remote(host, local, file):
     ssh = get_ssh(host)
     sftp = ssh.open_sftp()
-    sftp.put(local, file)
+    if hasattr(local, 'read'):
+        sftp.putfo(local, file)
+    else:
+        sftp.put(local, file)
     sftp.close()
+
+
+def rand_file_name(directory):
+    return os.path.join(directory, ''.join([
+        random.choice(string.ascii_letters) for _ in range(10)]))
