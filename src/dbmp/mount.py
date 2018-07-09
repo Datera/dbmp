@@ -59,8 +59,7 @@ def clean_mounts(api, vols, directory, workers):
 
 
 def _unmount(ai_name, si_name, vol_name, directory):
-    name = "-".join((ai_name, si_name, vol_name))
-    folder = os.path.join(directory, name)
+    folder = get_dirname(directory, ai_name, si_name, vol_name)
     try:
         exe("sudo umount {}".format(folder))
     except EnvironmentError as e:
@@ -79,6 +78,10 @@ def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers):
         p.run_threads()
 
 
+def get_dirname(directory, ai_name, si_name, vol_name):
+    return os.path.join(directory, "-".join((ai_name, si_name, vol_name)))
+
+
 def _mount_volume(api, ai, multipath, fs, fsargs, directory):
     _setup_acl(api, ai)
     ai.set(admin_state='online')
@@ -89,12 +92,11 @@ def _mount_volume(api, ai, multipath, fs, fsargs, directory):
         for i, vol in enumerate(si.volumes.list()):
             path = _login(ac['iqn'], ac['ips'], multipath, i)
             print("Volume device path:", path)
-            name = "-".join((ai.name, si.name, vol.name))
-            _format_mount_device(path, fs, fsargs, name, directory)
+            folder = get_dirname(directory, ai.name, si.name, vol.name)
+            _format_mount_device(path, fs, fsargs, folder)
 
 
-def _format_mount_device(path, fs, fsargs, name, directory):
-    folder = os.path.join(directory, name)
+def _format_mount_device(path, fs, fsargs, folder):
     timeout = 5
     while True:
         try:

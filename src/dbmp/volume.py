@@ -152,6 +152,10 @@ def _create_complex_volume(api, opts):
 def create_volumes(api, vopt, workers):
     print("Creating volumes:", vopt)
     opts = parse_vol_opt(vopt)
+    ais = ais_from_vols(vopt)
+    # If they already exist lets just use them
+    if ais:
+        return ais
     if 'sis' in opts:
         return [_create_complex_volume(api, opts)]
     funcs, args, results = [], [], []

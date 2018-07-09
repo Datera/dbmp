@@ -1,0 +1,10 @@
+[global]
+randrepeat=0
+ioengine=libaio
+iodepth=16
+direct=1
+numjobs=4
+runtime=3600
+group_reporting
+time_based
+size=1G

@@ -11,6 +11,7 @@ from dfs_sdk import scaffold
 from dbmp.volume import DEFAULT_PREFIX, create_volumes, clean_volumes
 from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
 from dbmp.mount import clean_mounts_remote
+from dbmp.fio import run_fio, run_fio_remote
 
 SUCCESS = 0
 FAILURE = 1
@@ -25,13 +26,16 @@ def main(args):
     print('Using Config:')
     scaffold.print_config()
 
-    if args.clean:
+    if args.unmount or args.clean:
         for vol in args.volume:
             if args.run_host == 'local':
                 clean_mounts(api, vol, args.directory, args.workers)
             else:
                 clean_mounts_remote(
                     args.run_host, vol, args.directory, args.workers)
+            if args.unmount:
+                return SUCCESS
+    if args.clean:
         for vol in args.volume:
             clean_volumes(api, vol, args.workers)
         return SUCCESS
@@ -47,6 +51,13 @@ def main(args):
         mount_volumes_remote(args.run_host, vols, not args.no_multipath,
                              args.fstype, args.fsargs, args.directory,
                              args.workers)
+
+    if args.fio and not args.mount:
+        print("--mount MUST be specified when using --fio")
+    elif args.fio and args.run_host == 'local':
+        run_fio(api, vols, args.fio_workload, args.directory)
+    elif args.fio and args.run_host != 'local':
+        run_fio_remote(api, vols, args.fio_workload, args.directory)
     return SUCCESS
 
 
@@ -75,8 +86,10 @@ if __name__ == '__main__':
                                  DEFAULT_PREFIX))
     parser.add_argument('-m', '--mount', action='store_true',
                         help='Mount volumes')
+    parser.add_argument('-u', '--unmount', action='store_true',
+                        help='Unmount volumes only.  Does not delete volume')
     parser.add_argument('-c', '--clean', action='store_true',
-                        help='Clean instead of create')
+                        help='Will both unmount and delete volumes')
     parser.add_argument('-w', '--workers', default=5,
                         help='Number of worker threads for this action')
     parser.add_argument('-n', '--no-multipath', action='store_true')
@@ -88,5 +101,10 @@ if __name__ == '__main__':
                                 ' the args you are passing in'))
     parser.add_argument('-d', '--directory', default='/mnt',
                         help='Directory under which to mount devices')
+    parser.add_argument('-i', '--fio', action='store_true',
+                        help='Run fio workload against mounted volumes')
+    parser.add_argument('-l', '--fio-workload',
+                        help='Fio workload file to use.  If not specified, '
+                             'default workload will be used')
     args = parser.parse_args()
     sys.exit(main(args))
