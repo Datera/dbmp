@@ -12,6 +12,7 @@ from dbmp.volume import DEFAULT_PREFIX, create_volumes, clean_volumes
 from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
 from dbmp.mount import clean_mounts_remote
 from dbmp.fio import run_fio, run_fio_remote
+from dbmp.utils import exe
 
 SUCCESS = 0
 FAILURE = 1
@@ -52,12 +53,17 @@ def main(args):
                              args.fstype, args.fsargs, args.directory,
                              args.workers)
 
+    if args.fio:
+        try:
+            exe("which fio")
+        except EnvironmentError:
+            print("FIO is not installed")
     if args.fio and not args.mount:
         print("--mount MUST be specified when using --fio")
     elif args.fio and args.run_host == 'local':
-        run_fio(api, vols, args.fio_workload, args.directory)
+        run_fio(vols, args.fio_workload, args.directory)
     elif args.fio and args.run_host != 'local':
-        run_fio_remote(api, vols, args.fio_workload, args.directory)
+        run_fio_remote(vols, args.fio_workload, args.directory)
     return SUCCESS
 
 

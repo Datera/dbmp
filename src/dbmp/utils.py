@@ -23,7 +23,9 @@ from dfs_sdk import scaffold
 from dbmp.topology import get_topology
 
 DBMP_REPO = 'http://github.com/Datera/dbmp'
-ASSETS = os.path.join(os.path.basename(__file__), 'assets')
+ASSETS = os.path.join(
+        os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))), 'assets')
 
 
 class Parallel(object):

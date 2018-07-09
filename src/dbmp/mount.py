@@ -24,7 +24,7 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
         '--vols {} '
         '{} '
         '--fs {} '
-        '--fsargs {}'
+        '--fsargs {} '
         '--directory {} '
         '--workers {}'.format(vs, m, fs, fa, directory, workers))
 
