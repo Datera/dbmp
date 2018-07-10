@@ -59,33 +59,36 @@ $ ./dbmp --volume size=5,prefix=my-vol,placement_mode=single_flash,replica=2,cou
 ```
 In the above example we are requesting a set of volumes with the following
 attributes:
-    * Size In GB (size=5)
-    * Name Prefix (prefix=my-vol)
-    * Volume Placement Mode (placement\_mode=single\_flash)
-    * Number Of Replicas (repliac=2)
-    * Total Number Of Volumes (count=3)
-    * QoS Read IOPS Max (read\_iops\_max=500)
+
+* Size In GB (size=5)
+* Name Prefix (prefix=my-vol)
+* Volume Placement Mode (placement\_mode=single\_flash)
+* Number Of Replicas (repliac=2)
+* Total Number Of Volumes (count=3)
+* QoS Read IOPS Max (read\_iops\_max=500)
 
 
 This will give us the following App Instances on the Datera side each with a
 single Storage Instance with a single Volume
-    * my-vol-1
-    * my-vol-2
-    * my-vol-3
+
+* my-vol-1
+* my-vol-2
+* my-vol-3
 
 All attributes are optional and have the following default values:
-    * size=1
-    * prefix=DBMP
-    * count=1
-    * replica=3
-    * placement\_mode=hybrid
-    * template=None
-    * read\_iops\_max=0
-    * write\_iops\_max=0
-    * total\_iops\_max=0
-    * read\_bw\_max=0
-    * write\_bw\_max=0
-    * total\_bw\_max=0
+
+* size=1
+* prefix=DBMP
+* count=1
+* replica=3
+* placement\_mode=hybrid
+* template=None
+* read\_iops\_max=0
+* write\_iops\_max=0
+* total\_iops\_max=0
+* read\_bw\_max=0
+* write\_bw\_max=0
+* total\_bw\_max=0
 
 ### Complex Creation
 
@@ -169,10 +172,11 @@ Complex Volumes will follow the same scheme, but as their Storage Instance
 and Volume names are customizeable, you'll need to consult their JSON schemas
 to determine their mount locations.  The complex volume example shown above
 would have mounts in the following locations
-    * /mnt/complex-app-storage-1-volume-1
-    * /mnt/complex-app-storage-1-volume-2
-    * /mnt/complex-app-storage-2-volume-3
-    * /mnt/complex-app-storage-2-volume-4
+
+* /mnt/complex-app-storage-1-volume-1
+* /mnt/complex-app-storage-1-volume-2
+* /mnt/complex-app-storage-2-volume-3
+* /mnt/complex-app-storage-2-volume-4
 
 
 ### Load Generation
