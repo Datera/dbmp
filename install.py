@@ -50,7 +50,7 @@ def exe_python(cmd):
 
 def main(args):
     global VERBOSE
-    VERBOSE = args.verbose
+    VERBOSE = not args.quiet
     try:
         exe("which virtualenv")
     except subprocess.CalledProcessError:
@@ -87,19 +87,23 @@ def main(args):
         st = os.stat(DBMP)
         os.chmod(DBMP, st.st_mode | stat.S_IEXEC)
 
-    if not os.path.isfile(CONFIG):
+    if not os.path.isfile(CONFIG) and args.gen_config:
         exe("cd {} && {} --gen-config json".format(DIR, DBMP))
-
-    print("DBMP is now installed.  Use '{}' to run DBMP."
-          "\nThe generated config file is located at '{}'. "
-          "\nIf an existing universal datera config file should be "
-          "used, remove the generated config file".format(
-              DBMP, CONFIG))
+        print("DBMP is now installed.  Use '{}' to run DBMP."
+              "\nThe generated config file is located at '{}'. "
+              "\nIf an existing universal datera config file should be "
+              "used, remove the generated config file".format(
+                  DBMP, CONFIG))
+    else:
+        print("DBMP is now installed.  Use '{}' to run DBMP.".format(DBMP))
     return 0
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("-g", "--gen-config",
+                        help="Generate Datera Universal Config file after "
+                             "install")
+    parser.add_argument("-q", "--quiet", action="store_true")
     args = parser.parse_args()
     sys.exit(main(args))
