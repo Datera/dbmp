@@ -180,17 +180,20 @@ def list_templates(api, detail):
 
 
 def _create_volume(hostname, api, opts, i, results):
-    qos = opts['qos']
     name = opts.get('prefix', hostname) + '-' + str(i)
-    ai = api.app_instances.create(name=name)
-    si = ai.storage_instances.create(name=STORE_NAME)
-    vol = si.volumes.create(
-        name=VOL_NAME,
-        replica_count=opts['replica'],
-        size=opts['size'],
-        placement_mode=opts['placement_mode'])
-    if qos:
-        vol.performance_policy.create(**qos)
+    if opts['template']:
+        api.app_instances.create(name=name, app_template=opts['template'])
+    else:
+        ai = api.app_instances.create(name=name)
+        si = ai.storage_instances.create(name=STORE_NAME)
+        vol = si.volumes.create(
+            name=VOL_NAME,
+            replica_count=opts['replica'],
+            size=opts['size'],
+            placement_mode=opts['placement_mode'])
+        qos = opts['qos']
+        if qos:
+            vol.performance_policy.create(**qos)
     print("Created volume:", name)
     results.append(ai)
 
