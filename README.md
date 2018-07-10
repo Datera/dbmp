@@ -1,6 +1,6 @@
 # DBMP (Datera Bare-Metal Provisioner)
 
-## Wat For?
+## What For?
 
 When running workloads against the Datera system, it often takes many steps and
 familiarity with the Datera interface to get a simple volume up and running
@@ -9,7 +9,7 @@ the REST API calls necessary to get this done or don't feel like rolling your
 own with our Python-SDK (wink-wink, nudge-nudge :) ), then this package was
 made for you!
 
-## Wat Do?
+## What Do?
 
 * Install prerequistes
     - Install ``python``
@@ -37,10 +37,12 @@ made for you!
 * Use
     - ``./dbmp --help``
 
-## Wat Really Do?
+## What Really Do?
 
 Functionality can be broken down into a few categories
 
+* Health Check
+* List Resources
 * Simple Creation
 * Complex Creation
 * Deletion
@@ -62,8 +64,8 @@ attributes:
 
 * Size In GB (size=5)
 * Name Prefix (prefix=my-vol)
-* Volume Placement Mode (placement\_mode=single\_flash)
-* Number Of Replicas (repliac=2)
+* Volume Placement Mode (placement\_mode=single\_flash) (choices hybrid|single\_flash|all\_flash)
+* Number Of Replicas (replicas=2)
 * Total Number Of Volumes (count=3)
 * QoS Read IOPS Max (read\_iops\_max=500)
 
@@ -78,7 +80,7 @@ single Storage Instance with a single Volume
 All attributes are optional and have the following default values:
 
 * size=1
-* prefix=DBMP
+* prefix=$(hostname)
 * count=1
 * replica=3
 * placement\_mode=hybrid
@@ -257,7 +259,7 @@ $ ./dbmp --volume my-complex-vol.json --mount --run-host my-host-1
 This will mount the example volumes on "my-host-1" instead of local.  Omitting
 the ``--run-host`` flag will default all operations to local.
 
-## Wat Problem?
+## What Problem?
 
 * File an issue on the github page
 * Contact us at support@datera.io

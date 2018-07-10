@@ -1,18 +1,19 @@
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, division
 
 import copy
 import io
 import json
+import platform
 
 from dfs_sdk import exceptions as dat_exceptions
 
-from dbmp.utils import Parallel
+from dbmp.utils import Parallel, exe_remote
 
-DEFAULT_PREFIX = 'DBMP'
 STORE_NAME = 'storage-1'
 VOL_NAME = 'volume-1'
 VOL_DEFAULTS = {'size': 1,
-                'prefix': DEFAULT_PREFIX,
+                'prefix': 'args.run_host',
                 'count': 1,
                 'replica': 3,
                 'placement_mode': 'hybrid',
@@ -118,9 +119,69 @@ def ais_from_vols(api, vols):
     return ais
 
 
-def _create_volume(api, opts, i, results):
+def _print_vol_tree(ai, detail):
+    if detail:
+        print(ai.name, ai.admin_state)
+    else:
+        print(ai.name)
+    if detail:
+        sis = ai.storage_instances.list()
+        for i, si in enumerate(sis):
+            if i < len(sis) - 1:
+                add = '|'
+            else:
+                add = ' '
+            print('    |')
+            print('    ∟ {} {} {}'.format(
+                si.name, si.access.get('iqn'),
+                json.dumps(si.access.get('ips', []))))
+            for vol in si.volumes.list():
+                print('    {}    |'.format(add))
+                print('    {}   ∟ {} {}GB {}-replica {}'.format(
+                    add, vol.name, vol.size, vol.replica_count,
+                    vol.placement_mode))
+
+
+def _print_tmpl_tree(tmpl, detail):
+    print(tmpl.name)
+    if detail:
+        sts = tmpl.storage_templates.list()
+        for i, st in enumerate(sts):
+            print('    |')
+            print('    ∟ {}'.format(st.name))
+            for vt in st.volume_templates.list():
+                if i < len(sts) - 1:
+                    add = '|'
+                else:
+                    add = ' '
+                print('    {}   |'.format(add))
+                print('    {}   ∟ {} {}GB {}-replica {}'.format(
+                    add, vt.name, vt.size, vt.replica_count,
+                    vt.placement_mode))
+
+
+def list_volumes(host, api, vopt, detail):
+    opts = parse_vol_opt(vopt)
+    hostname = _get_hostname(host)
+    for ai in sorted(api.app_instances.list(), key=lambda x: x.name):
+        if (opts.get('prefix') == 'all' or
+                opts.get('name') == ai.name or
+                ai.name.startswith(opts.get('prefix', hostname))):
+            print('-------')
+            _print_vol_tree(ai, detail)
+    print('-------')
+
+
+def list_templates(api, detail):
+    for tmpl in api.app_templates.list():
+        print('--------')
+        _print_tmpl_tree(tmpl, detail)
+    print('--------')
+
+
+def _create_volume(hostname, api, opts, i, results):
     qos = opts['qos']
-    name = opts['prefix'] + '-' + str(i)
+    name = opts.get('prefix', hostname) + '-' + str(i)
     ai = api.app_instances.create(name=name)
     si = ai.storage_instances.create(name=STORE_NAME)
     vol = si.volumes.create(
@@ -152,7 +213,16 @@ def _create_complex_volume(api, opts):
     return ai
 
 
-def create_volumes(api, vopt, workers):
+def _get_hostname(host):
+    if host == 'local':
+        hostname = platform.node().strip()
+    else:
+        hostname = exe_remote(host, "hostname").strip()
+    return hostname
+
+
+def create_volumes(host, api, vopt, workers):
+    hostname = _get_hostname(host)
     print("Creating volumes:", vopt)
     opts = parse_vol_opt(vopt)
     ais = ais_from_vols(api, vopt)
@@ -164,7 +234,7 @@ def create_volumes(api, vopt, workers):
     funcs, args, results = [], [], []
     for i in range(int(opts['count'])):
         funcs.append(_create_volume)
-        args.append((api, opts, i, results))
+        args.append((hostname, api, opts, i, results))
     p = Parallel(funcs, args_list=args, max_workers=workers)
     p.run_threads()
     return results

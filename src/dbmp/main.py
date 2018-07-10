@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, division
 
 import argparse
@@ -7,8 +7,10 @@ import sys
 import textwrap
 
 from dfs_sdk import scaffold
+# from dfs_sdk import exceptions as dexceptions
 
-from dbmp.volume import DEFAULT_PREFIX, create_volumes, clean_volumes
+from dbmp.volume import create_volumes, clean_volumes, list_volumes
+from dbmp.volume import list_templates
 from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
 from dbmp.mount import clean_mounts_remote
 from dbmp.fio import run_fio, run_fio_remote
@@ -22,10 +24,51 @@ def hf(txt):
     return textwrap.fill(txt)
 
 
+def run_health(api):
+    config = scaffold.get_config()
+    try:
+        exe('ping -c 1 -w 1 {}'.format(config['mgmt_ip']))
+    except EnvironmentError:
+        print('Could not ping mgmt_ip:', config['mgmt_ip'])
+        return False
+    try:
+        api.app_instances.list()
+    except Exception as e:
+        print("Could not connect to cluster", e)
+        return False
+    npass = True
+    av = api.system.network.access_vip.get()
+    for np in av['network_paths']:
+        ip = np.get('ip')
+        if ip:
+            try:
+                exe('ping -c 1 -w 1 {}'.format(ip))
+            except EnvironmentError:
+                print('Could not ping: {} {}'.format(np.get('name'), ip))
+                npass = False
+    if not npass:
+        return False
+    print("Health Check Completed Successfully")
+    return True
+
+
 def main(args):
     api = scaffold.get_api()
     print('Using Config:')
     scaffold.print_config()
+
+    if args.health:
+        if not run_health(api):
+            return FAILURE
+        return SUCCESS
+
+    if 'volumes' in args.list:
+        for vol in args.volume:
+            list_volumes(args.run_host, api, vol, detail='detail' in args.list)
+        return SUCCESS
+    elif 'templates' in args.list:
+        list_templates(api, detail='detail' in args.list)
+        return SUCCESS
 
     if args.unmount or args.clean:
         for vol in args.volume:
@@ -43,7 +86,7 @@ def main(args):
 
     vols = None
     for vol in args.volume:
-        vols = create_volumes(api, vol, args.workers)
+        vols = create_volumes(args.run_host, api, vol, args.workers)
 
     if args.mount and vols and args.run_host == 'local':
         mount_volumes(api, vols, not args.no_multipath, args.fstype,
@@ -76,20 +119,26 @@ if __name__ == '__main__':
                                 ' This value will be a key in your '
                                 '"dbmp-topology.json" file. Use "local" for'
                                 'the current host'))
+    parser.add_argument('--health', action='store_true',
+                        help='Run a quick health check')
+    parser.add_argument('--list', choices=('volumes', 'volumes-detail',
+                                           'templates', 'templates-detail'),
+                        default='',
+                        help='List accessible Datera Resources')
     parser.add_argument('--volume', action='append', default=[],
                         help='Supports the following comma separated params:\n'
                              ' \n'
-                             '* prefix, default={}\n'
+                             '* prefix, default=--run-default hostname\n'
                              '* count (num created), default=1\n'
                              '* size (GB), default=1\n'
                              '* replica, default=3\n'
                              '* <any supported qos param, eg: read_iops_max>\n'
                              '* placement_mode, default=hybrid\n'
+                             '      choices: hybrid|single_flash|all_flash\n'
                              '* template, default=None\n \n'
                              'Example: prefix=test,size=2,replica=2\n \n'
                              'Alternatively a json file with the above\n'
-                             'parameters can be specified'.format(
-                                 DEFAULT_PREFIX))
+                             'parameters can be specified')
     parser.add_argument('-m', '--mount', action='store_true',
                         help='Mount volumes')
     parser.add_argument('-u', '--unmount', action='store_true',
