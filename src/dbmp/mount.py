@@ -220,7 +220,7 @@ def _logout(iqn, portals):
         exe("sudo iscsiadm -m discoverydb -p {ip}:3260 --op delete".format(
             ip=portal),
             fail_ok=True)
-    exe("sudo iscsiadm -m session --rescan")
+    exe("sudo iscsiadm -m session --rescan", fail_ok=True)
     exe("sudo multipath -F", fail_ok=True)
     print("Sleeping to wait for logout")
     time.sleep(2)
