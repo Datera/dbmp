@@ -46,6 +46,7 @@ Functionality can be broken down into a few categories
 * Simple Creation
 * Complex Creation
 * Deletion
+* Login/Logout
 * Mount/Unmount
 * Load Generation
 * Topology
@@ -156,6 +157,15 @@ Or in the case of a complex volume
 ```bash
 $ ./dbmp --volume my-complex-vol.json --clean
 ```
+### Login/Logout
+
+Login and Logout is the same as creation/deletion but you add the `--login``
+and ``--logout`` flags (``-clean`` implies logout, and ``--mount/--unmount``
+implies login/logout)
+
+When logging in without ``--mount``, all operations afterwards (such as FIO)
+will be referring to the raw device directly.  No filesystem will be created
+and the device will not be mounted.
 
 ### Mount/Unmount
 
@@ -183,8 +193,8 @@ would have mounts in the following locations
 
 ### Load Generation
 
-You can have FIO run against all created mounts via by adding ``--fio`` to the
-invocation.
+You can have DBMP generate FIO against all created mounts (or devices) via by
+adding ``--fio`` to the invocation.
 
 ```bash
 $ ./dbmp --volume my-complex-vol.json --mount --fio
@@ -225,10 +235,16 @@ size=1G
 
 [job-1]
 directory=/mnt/complex-app-storage-1-volume-1
+[job-1]
 directory=/mnt/complex-app-storage-1-volume-2
+[job-1]
 directory=/mnt/complex-app-storage-2-volume-3
+[job-1]
 directory=/mnt/complex-app-storage-2-volume-4
 ```
+
+If the ``--mount`` flag has not been passed in, then instead of "directory",
+"filename" will be used with the device
 
 To specify your own FIO workload, use the ``--fio-workload`` flag.  Your
 workload MUST only have a [global] section
