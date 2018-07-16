@@ -13,7 +13,7 @@ from dbmp.volume import create_volumes, clean_volumes, list_volumes
 from dbmp.volume import list_templates
 from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
 from dbmp.mount import clean_mounts_remote
-from dbmp.fio import run_fio, run_fio_remote
+from dbmp.fio import gen_fio, gen_fio_remote
 from dbmp.utils import exe
 
 SUCCESS = 0
@@ -70,7 +70,7 @@ def main(args):
         list_templates(api, detail='detail' in args.list)
         return SUCCESS
 
-    if args.unmount or args.clean:
+    if any((args.unmount, args.logout, args.clean)):
         for vol in args.volume:
             if args.run_host == 'local':
                 clean_mounts(api, vol, args.directory, args.workers)
@@ -88,25 +88,27 @@ def main(args):
     for vol in args.volume:
         vols = create_volumes(args.run_host, api, vol, args.workers)
 
-    if args.mount and vols and args.run_host == 'local':
-        mount_volumes(api, vols, not args.no_multipath, args.fstype,
-                      args.fsargs, args.directory, args.workers)
-    elif args.mount and vols and args.run_host != 'local':
-        mount_volumes_remote(args.run_host, vols, not args.no_multipath,
-                             args.fstype, args.fsargs, args.directory,
-                             args.workers)
+    login_only = not args.mount and args.login
+    if (args.mount or args.login) and vols and args.run_host == 'local':
+        dev_or_folders = mount_volumes(
+            api, vols, not args.no_multipath, args.fstype, args.fsargs,
+            args.directory, args.workers, login_only)
+    elif (args.mount or args.login) and vols and args.run_host != 'local':
+        dev_or_folders = mount_volumes_remote(
+            args.run_host, vols, not args.no_multipath, args.fstype,
+            args.fsargs, args.directory, args.workers, login_only)
 
     if args.fio:
         try:
             exe("which fio")
         except EnvironmentError:
             print("FIO is not installed")
-    if args.fio and not args.mount:
-        print("--mount MUST be specified when using --fio")
+    if args.fio and (not args.mount and not args.login):
+        print("--mount or --login MUST be specified when using --fio")
     elif args.fio and args.run_host == 'local':
-        run_fio(vols, args.fio_workload, args.directory)
+        gen_fio(args.fio_workload, dev_or_folders)
     elif args.fio and args.run_host != 'local':
-        run_fio_remote(args.run_host, vols, args.fio_workload, args.directory)
+        gen_fio_remote(args.run_host, args.fio_workload, dev_or_folders)
     return SUCCESS
 
 
@@ -114,7 +116,7 @@ if __name__ == '__main__':
     tparser = scaffold.get_argparser(add_help=False)
     parser = argparse.ArgumentParser(
         parents=[tparser], formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-s', '--run-host', default='local',
+    parser.add_argument('--run-host', default='local',
                         help=hf('Host on which targets should be logged in.'
                                 ' This value will be a key in your '
                                 '"dbmp-topology.json" file. Use "local" for'
@@ -139,26 +141,31 @@ if __name__ == '__main__':
                              'Example: prefix=test,size=2,replica=2\n \n'
                              'Alternatively a json file with the above\n'
                              'parameters can be specified')
-    parser.add_argument('-m', '--mount', action='store_true',
-                        help='Mount volumes')
-    parser.add_argument('-u', '--unmount', action='store_true',
+    parser.add_argument('--login', action='store_true',
+                        help='Login volumes (implied by --mount)')
+    parser.add_argument('--logout', action='store_true',
+                        help='Logout volumes (implied by --unmount)')
+    parser.add_argument('--mount', action='store_true',
+                        help='Mount volumes, (implies --login)')
+    parser.add_argument('--unmount', action='store_true',
                         help='Unmount volumes only.  Does not delete volume')
-    parser.add_argument('-c', '--clean', action='store_true',
-                        help='Will both unmount and delete volumes')
-    parser.add_argument('-w', '--workers', default=5,
+    parser.add_argument('--clean', action='store_true',
+                        help='Deletes volumes (implies --unmount and '
+                             '--logout)')
+    parser.add_argument('--workers', default=5,
                         help='Number of worker threads for this action')
-    parser.add_argument('-n', '--no-multipath', action='store_true')
-    parser.add_argument('-f', '--fstype', default='xfs',
+    parser.add_argument('--no-multipath', action='store_true')
+    parser.add_argument('--fstype', default='xfs',
                         help='Filesystem to use when formatting devices')
-    parser.add_argument('-a', '--fsargs', default='',
+    parser.add_argument('--fsargs', default='',
                         help=hf('Extra args to give formatter, eg "-E '
                                 'lazy_table_init=1".  Make sure fstype matches'
                                 ' the args you are passing in'))
-    parser.add_argument('-d', '--directory', default='/mnt',
+    parser.add_argument('--directory', default='/mnt',
                         help='Directory under which to mount devices')
-    parser.add_argument('-i', '--fio', action='store_true',
+    parser.add_argument('--fio', action='store_true',
                         help='Run fio workload against mounted volumes')
-    parser.add_argument('-l', '--fio-workload',
+    parser.add_argument('--fio-workload',
                         help='Fio workload file to use.  If not specified, '
                              'default workload will be used')
     args = parser.parse_args()

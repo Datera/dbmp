@@ -13,11 +13,12 @@ DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
 
 
 def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
-                         workers):
+                         workers, login_only):
     check_install(host)
     m = '--multipath' if multipath else ''
     vs = ','.join([v.name for v in vols])
     fa = '"{}"'.format(fsargs)
+    lo = '--login-only' if login_only else ''
     exe_remote_py(
         host,
         'mount.py '
@@ -26,7 +27,8 @@ def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
         '--fs {} '
         '--fsargs {} '
         '--directory {} '
-        '--workers {}'.format(vs, m, fs, fa, directory, workers))
+        '--workers {} '
+        '{}'.format(vs, m, fs, fa, directory, workers, lo))
 
 
 def clean_mounts_remote(host, vols, directory, workers):
@@ -67,21 +69,26 @@ def _unmount(ai_name, si_name, vol_name, directory):
     exe("sudo rmdir {}".format(folder))
 
 
-def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers):
+def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers,
+                  login_only):
     funcs, args = [], []
+    results = []
     for ai in vols:
         funcs.append(_mount_volume)
-        args.append((api, ai, multipath, fs, fsargs, directory))
+        args.append((api, ai, multipath, fs, fsargs, directory, login_only,
+                     results))
     if funcs:
         p = Parallel(funcs, args_list=args, max_workers=workers)
         p.run_threads()
+    return results
 
 
 def get_dirname(directory, ai_name, si_name, vol_name):
     return os.path.join(directory, "-".join((ai_name, si_name, vol_name)))
 
 
-def _mount_volume(api, ai, multipath, fs, fsargs, directory):
+def _mount_volume(api, ai, multipath, fs, fsargs, directory, login_only,
+                  results):
     _setup_acl(api, ai)
     ai.set(admin_state='online')
     for si in ai.storage_instances.list():
@@ -90,9 +97,13 @@ def _mount_volume(api, ai, multipath, fs, fsargs, directory):
         ac = si.access
         for i, vol in enumerate(si.volumes.list()):
             path = _login(ac['iqn'], ac['ips'], multipath, i)
+            if login_only:
+                results.append(path)
             print("Volume device path:", path)
-            folder = get_dirname(directory, ai.name, si.name, vol.name)
-            _format_mount_device(path, fs, fsargs, folder)
+            if not login_only:
+                folder = get_dirname(directory, ai.name, si.name, vol.name)
+                results.append(folder)
+                _format_mount_device(path, fs, fsargs, folder)
 
 
 def _format_mount_device(path, fs, fsargs, folder):
@@ -102,8 +113,23 @@ def _format_mount_device(path, fs, fsargs, folder):
             exe("sudo mkfs.{} {} {} ".format(fs, fsargs, path))
             break
         except EnvironmentError:
+            print("Checking for existing filesystem on:", path)
+            try:
+                out = exe(
+                    "sudo blkid {} | grep -Eo '(TYPE=\".*\")'".format(
+                        path))
+                parts = out.split("=")
+                if len(parts) == 2:
+                    found_fs = parts[-1].lower().strip().strip('"')
+                    if found_fs == fs.lower():
+                        print("Found existing filesystem, continuing")
+                        break
+            except EnvironmentError:
+                pass
             print("Failed to format {}. Waiting for device to be ready".format(
                 path))
+            if not timeout:
+                raise
             time.sleep(1)
             timeout -= 1
     exe("sudo mkdir -p /{}".format(folder.strip("/")))
@@ -145,7 +171,10 @@ def _setup_acl(api, ai):
         # If we get a ConflictError, it already exists and we can just use it
         initiator_obj = api.initiators.get(initiator)
     for si in ai.storage_instances.list():
-        si.acl_policy.initiators.add(initiator_obj)
+        try:
+            si.acl_policy.initiators.add(initiator_obj)
+        except dat_exceptions.ApiConflictError:
+            print("ACL already registered for {},{}".format(ai.name, si.name))
     print("Setting up ACLs for {} targets".format(ai.name))
 
 
@@ -159,7 +188,7 @@ def _get_multipath_disk(path):
     sdevice = os.path.basename(device_path)
     # If destination directory is already identified as a multipath device,
     # just return its path
-    if sdevice.starstwith("dm-"):
+    if sdevice.startswith("dm-"):
             return path
     # Fallback to iterating through all the entries under /sys/block/dm-* and
     # check to see if any have an entry under /sys/block/dm-*/slaves matching
@@ -205,6 +234,8 @@ def _login(iqn, portals, multipath, lun):
                     time.sleep(2)
     path = DEV_TEMPLATE.format(ip=portals[0], iqn=iqn, lun=lun)
     if multipath:
+        print('Sleeping to allow for multipath devices to finish linking')
+        time.sleep(2)
         dpath = _get_multipath_disk(path)
     else:
         dpath = path

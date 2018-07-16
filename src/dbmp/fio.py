@@ -5,21 +5,20 @@ import os
 import tempfile
 from StringIO import StringIO
 
-from dbmp.mount import get_dirname
 from dbmp.utils import ASSETS, exe, putf_remote, rand_file_name, check_install
 from dbmp.utils import exe_remote_py
 
 FIO_DEFAULT = os.path.join(ASSETS, 'fiotemplate.fio')
 
 
-def run_fio(vols, fiofile, directory):
-    fio = _setup(vols, fiofile, directory)
+def gen_fio(fiofile, dev_or_folders):
+    fio = _setup(fiofile, dev_or_folders)
     with tempfile.NamedTemporaryFile(delete=False) as tf:
         tf.write(fio)
         tf.flush()
-        print("Running FIO job")
+        print("Generating FIO job: {}".format(tf.name))
+        print("------------------")
         print(fio)
-        exe("sudo fio {}".format(tf.name))
 
 
 def run_fio_from_file(fiofile):
@@ -28,7 +27,7 @@ def run_fio_from_file(fiofile):
     exe("sudo fio {}".format(fiofile))
 
 
-def run_fio_remote(host, vols, fiofile, directory):
+def gen_fio_remote(host, vols, fiofile, directory):
     fio = _setup(vols, fiofile, directory)
     fname = rand_file_name('/tmp')
     putf_remote(host, StringIO(fio), fname)
@@ -39,7 +38,7 @@ def run_fio_remote(host, vols, fiofile, directory):
         '--fio-workload {}'.format(fname))
 
 
-def _setup(vols, fiofile, directory):
+def _setup(fiofile, dev_or_folders):
     fiobase = None
     if not fiofile:
         fiofile = FIO_DEFAULT
@@ -52,14 +51,14 @@ def _setup(vols, fiofile, directory):
             break
     if not found_size:
         fiobase.append('size=1G')
-    fiobase.append('[job-1]')
-    for ai in vols:
-        for si in ai.storage_instances.list():
-            for vol in si.volumes.list():
-                folder = get_dirname(directory, ai.name, si.name, vol.name)
-                _add_directory(fiobase, folder)
-    return '\n'.join((elem.strip() for elem in fiobase))
+    for df in dev_or_folders:
+        fiobase.append('[fio-job]')
+        _add_directory(fiobase, df)
+    return '\n'.join((elem.strip() for elem in fiobase)) + '\n'
 
 
 def _add_directory(fiobase, folder):
-    fiobase.append('directory=/{}'.format(folder.strip('/')))
+    if '/dev' in folder:
+        fiobase.append('filename=/{}'.format(folder.strip('/')))
+    else:
+        fiobase.append('directory=/{}'.format(folder.strip('/')))
