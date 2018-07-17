@@ -165,11 +165,18 @@ def _get_initiator():
 def _setup_acl(api, ai):
     initiator = _get_initiator()
     host = exe('hostname').strip()
+    initiator_obj = None
     try:
-        initiator_obj = api.initiators.create(name=host, id=initiator)
-    except dat_exceptions.ApiConflictError:
-        # If we get a ConflictError, it already exists and we can just use it
         initiator_obj = api.initiators.get(initiator)
+        # Handle case where initiator exists in parent tenant
+        # We want to create a new initiator in the case
+        tenant = api.context.tenant
+        if not tenant:
+            tenant = '/root'
+        if initiator_obj.tenant != tenant:
+            raise dat_exceptions.ApiNotFoundError()
+    except dat_exceptions.ApiNotFoundError:
+        initiator_obj = api.initiators.create(name=host, id=initiator)
     for si in ai.storage_instances.list():
         try:
             si.acl_policy.initiators.add(initiator_obj)
