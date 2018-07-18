@@ -217,6 +217,22 @@ def _get_multipath_disk(path):
             path, device_path))
 
 
+def _set_noop_scheduler(portals, iqn, lun):
+    for portal in portals:
+        path = DEV_TEMPLATE.format(ip=portal, iqn=iqn, lun=lun)
+        device = None
+        while True:
+            out = exe("ls -l {} | awk '{{print $NF}}'".format(path))
+            device = out.split("/")[-1].strip()
+            if device:
+                break
+            print("Waiting for device to be ready:", path)
+            time.sleep(1)
+        print("Setting noop scheduler for device:", device)
+        exe("echo 'noop' | sudo tee /sys/block/{}/queue/scheduler".format(
+            device))
+
+
 def _login(iqn, portals, multipath, lun):
     retries = 10
     if not multipath:
@@ -239,6 +255,7 @@ def _login(iqn, portals, multipath, lun):
                         raise
                     print("Failed to login to portal, retrying")
                     time.sleep(2)
+    _set_noop_scheduler(portals, iqn, lun)
     path = DEV_TEMPLATE.format(ip=portals[0], iqn=iqn, lun=lun)
     if multipath:
         print('Sleeping to allow for multipath devices to finish linking')
