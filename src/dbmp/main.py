@@ -12,7 +12,7 @@ from dfs_sdk import scaffold
 from dbmp.volume import create_volumes, clean_volumes, list_volumes
 from dbmp.volume import list_templates
 from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
-from dbmp.mount import clean_mounts_remote
+from dbmp.mount import clean_mounts_remote, list_mounts
 from dbmp.fio import gen_fio, gen_fio_remote
 from dbmp.utils import exe
 
@@ -68,6 +68,10 @@ def main(args):
         return SUCCESS
     elif 'templates' in args.list:
         list_templates(api, detail='detail' in args.list)
+    elif 'mounts' in args.list:
+        for vol in args.volume:
+            list_mounts(args.run_host, api, vol, 'detail' in args.list,
+                        not args.no_multipath)
         return SUCCESS
 
     if any((args.unmount, args.logout, args.clean)):
@@ -124,7 +128,8 @@ if __name__ == '__main__':
     parser.add_argument('--health', action='store_true',
                         help='Run a quick health check')
     parser.add_argument('--list', choices=('volumes', 'volumes-detail',
-                                           'templates', 'templates-detail'),
+                                           'templates', 'templates-detail',
+                                           'mounts', 'mounts-detail'),
                         default='',
                         help='List accessible Datera Resources')
     parser.add_argument('--volume', action='append', default=[],

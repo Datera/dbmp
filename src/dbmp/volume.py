@@ -4,11 +4,9 @@ from __future__ import unicode_literals, print_function, division
 import copy
 import io
 import json
-import platform
-
 from dfs_sdk import exceptions as dat_exceptions
 
-from dbmp.utils import Parallel, exe_remote
+from dbmp.utils import Parallel, get_hostname, dprint
 
 STORE_NAME = 'storage-1'
 VOL_NAME = 'volume-1'
@@ -162,7 +160,7 @@ def _print_tmpl_tree(tmpl, detail):
 
 def list_volumes(host, api, vopt, detail):
     opts = parse_vol_opt(vopt)
-    hostname = _get_hostname(host)
+    hostname = get_hostname(host)
     for ai in sorted(api.app_instances.list(), key=lambda x: x.name):
         if (opts.get('prefix') == 'all' or
                 opts.get('name') == ai.name or
@@ -216,17 +214,9 @@ def _create_complex_volume(api, opts):
     return ai
 
 
-def _get_hostname(host):
-    if host == 'local':
-        hostname = platform.node().strip()
-    else:
-        hostname = exe_remote(host, "hostname").strip()
-    return hostname
-
-
 def create_volumes(host, api, vopt, workers):
-    hostname = _get_hostname(host)
-    print("Creating volumes:", vopt)
+    hostname = get_hostname(host)
+    dprint("Creating volumes:", vopt)
     opts = parse_vol_opt(vopt)
     ais = ais_from_vols(api, vopt)
     # If they already exist lets just use them
@@ -245,7 +235,7 @@ def create_volumes(host, api, vopt, workers):
 
 def _clean_volume(ai, opts):
     if ai.name.startswith(opts['prefix']):
-        print("Cleaning volume:", ai.name)
+        dprint("Cleaning volume:", ai.name)
         ai.set(admin_state='offline', force=True)
         ai.delete(force=True)
 

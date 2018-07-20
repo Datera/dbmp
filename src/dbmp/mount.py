@@ -6,8 +6,9 @@ import time
 
 from dfs_sdk import exceptions as dat_exceptions
 
-from dbmp.volume import ais_from_vols
+from dbmp.volume import ais_from_vols, parse_vol_opt
 from dbmp.utils import Parallel, exe, check_install, exe_remote_py
+from dbmp.utils import get_hostname, dprint
 
 DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
 
@@ -64,7 +65,7 @@ def _unmount(ai_name, si_name, vol_name, directory):
     try:
         exe("sudo umount {}".format(folder))
     except EnvironmentError as e:
-        print(e)
+        dprint(e)
         return
     exe("sudo rmdir {}".format(folder))
 
@@ -113,7 +114,7 @@ def _format_mount_device(path, fs, fsargs, folder):
             exe("sudo mkfs.{} {} {} ".format(fs, fsargs, path))
             break
         except EnvironmentError:
-            print("Checking for existing filesystem on:", path)
+            dprint("Checking for existing filesystem on:", path)
             try:
                 out = exe(
                     "sudo blkid {} | grep -Eo '(TYPE=\".*\")'".format(
@@ -122,18 +123,19 @@ def _format_mount_device(path, fs, fsargs, folder):
                 if len(parts) == 2:
                     found_fs = parts[-1].lower().strip().strip('"')
                     if found_fs == fs.lower():
-                        print("Found existing filesystem, continuing")
+                        dprint("Found existing filesystem, continuing")
                         break
             except EnvironmentError:
                 pass
-            print("Failed to format {}. Waiting for device to be ready".format(
-                path))
+            dprint("Failed to format {}. Waiting for device to be "
+                   "ready".format(path))
             if not timeout:
                 raise
             time.sleep(1)
             timeout -= 1
     exe("sudo mkdir -p /{}".format(folder.strip("/")))
     exe("sudo mount {} {}".format(path, folder))
+    print("Volume mount:", folder)
 
 
 def _si_poll(si):
@@ -158,7 +160,7 @@ def _get_initiator():
             if line.startswith('InitiatorName='):
                 return line.split("=", 1)[-1].strip()
     except EnvironmentError:
-        print("Could not find the iSCSI Initiator File %s", file_path)
+        dprint("Could not find the iSCSI Initiator File %s", file_path)
         raise
 
 
@@ -181,8 +183,8 @@ def _setup_acl(api, ai):
         try:
             si.acl_policy.initiators.add(initiator_obj)
         except dat_exceptions.ApiConflictError:
-            print("ACL already registered for {},{}".format(ai.name, si.name))
-    print("Setting up ACLs for {} targets".format(ai.name))
+            dprint("ACL already registered for {},{}".format(ai.name, si.name))
+    dprint("Setting up ACLs for {} targets".format(ai.name))
 
 
 def _get_multipath_disk(path):
@@ -190,7 +192,7 @@ def _get_multipath_disk(path):
     try:
         device_path = os.readlink(path)
     except OSError as e:
-        print("Error reading link: {}. error: {}".format(path, e))
+        dprint("Error reading link: {}. error: {}".format(path, e))
         return
     sdevice = os.path.basename(device_path)
     # If destination directory is already identified as a multipath device,
@@ -209,8 +211,8 @@ def _get_multipath_disk(path):
                 # We've found a matching entry, return the path for the
                 # dm-* device it was found under
                 p = os.path.join("/dev", os.path.basename(dmpath))
-                print("Found matching device: {} under dm-* device path "
-                      "{}".format(sdevice, dmpath))
+                dprint("Found matching device: {} under dm-* device path "
+                       "{}".format(sdevice, dmpath))
                 return p
     raise EnvironmentError(
         "Couldn't find dm-* path for path: {}, found non dm-* path: {}".format(
@@ -226,9 +228,9 @@ def _set_noop_scheduler(portals, iqn, lun):
             device = out.split("/")[-1].strip()
             if device:
                 break
-            print("Waiting for device to be ready:", path)
+            dprint("Waiting for device to be ready:", path)
             time.sleep(1)
-        print("Setting noop scheduler for device:", device)
+        dprint("Setting noop scheduler for device:", device)
         exe("echo 'noop' | sudo tee /sys/block/{}/queue/scheduler".format(
             device))
 
@@ -240,7 +242,7 @@ def _login(iqn, portals, multipath, lun):
     if lun == 0:
         for portal in portals:
             while True:
-                print("Trying to log into target:", portal)
+                dprint("Trying to log into target:", portal)
                 try:
                     exe("sudo iscsiadm -m discovery -t st -p {}:3260".format(
                         portal))
@@ -250,15 +252,15 @@ def _login(iqn, portals, multipath, lun):
                 except EnvironmentError:
                     retries -= 1
                     if not retries:
-                        print("Could not log into portal before end of "
-                              "polling period")
+                        dprint("Could not log into portal before end of "
+                               "polling period")
                         raise
-                    print("Failed to login to portal, retrying")
+                    dprint("Failed to login to portal, retrying")
                     time.sleep(2)
     _set_noop_scheduler(portals, iqn, lun)
     path = DEV_TEMPLATE.format(ip=portals[0], iqn=iqn, lun=lun)
     if multipath:
-        print('Sleeping to allow for multipath devices to finish linking')
+        dprint('Sleeping to allow for multipath devices to finish linking')
         time.sleep(2)
         dpath = _get_multipath_disk(path)
     else:
@@ -277,6 +279,45 @@ def _logout(iqn, portals):
             fail_ok=True)
     exe("sudo iscsiadm -m session --rescan", fail_ok=True)
     exe("sudo multipath -F", fail_ok=True)
-    print("Sleeping to wait for logout")
+    dprint("Sleeping to wait for logout")
     time.sleep(2)
-    print("Logout complete")
+    dprint("Logout complete")
+
+
+def list_mounts(host, api, vopt, detail, multipath):
+    opts = parse_vol_opt(vopt)
+    hostname = get_hostname(host)
+    if detail:
+        print("\nMOUNTS-DETAIL")
+        print("-------------")
+    else:
+        print("\nMOUNTS")
+        print("------")
+    for ai in sorted(api.app_instances.list(), key=lambda x: x.name):
+        if (opts.get('prefix') == 'all' or
+                opts.get('name') == ai.name or
+                ai.name.startswith(opts.get('prefix', hostname))):
+            for si in ai.storage_instances.list():
+                for i, vol in enumerate(si.volumes.list()):
+                    mount, path, device = _find_mount(ai, si, i, multipath)
+                    if mount and detail:
+                        print(",".join((ai.name, si.name, vol.name)),
+                              ":", mount, ":", path, ":", device)
+                    elif mount:
+                        print(",".join((ai.name, si.name, vol.name)),
+                              ":", mount)
+
+
+def _find_mount(ai, si, lun, multipath):
+    ip = si.access['ips'][0]
+    iqn = si.access['iqn']
+    path = DEV_TEMPLATE.format(ip=ip, iqn=iqn, lun=lun)
+    if multipath:
+        path = _get_multipath_disk(path)
+    out = exe("ls -l {} | awk '{{print $NF}}'".format(path))
+    device = out.split("/")[-1].strip()
+    if not device:
+        return None, path, device
+    mount = exe("cat /proc/mounts | grep {} | awk '{{print $2}}'".format(
+        device))
+    return mount.strip(), path, device

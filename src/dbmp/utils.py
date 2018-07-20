@@ -9,6 +9,7 @@ try:
 except ImportError:
     import Queue as queue
 import os
+import platform
 import random
 import string
 import subprocess
@@ -154,12 +155,14 @@ class Parallel(object):
 
 
 def exe(cmd, fail_ok=False):
-    print("Running command:", cmd)
+    cmd = '{{ {}; }} 2>/dev/null'.format(cmd)
+    dprint("Running command:", cmd)
     try:
+        # Redirect stderr
         return subprocess.check_output(cmd, shell=True)
     except subprocess.CalledProcessError as e:
         if fail_ok:
-            print(e)
+            dprint(e)
             return None
         raise EnvironmentError(
             "Encountered error running command: {}, error : {}".format(cmd, e))
@@ -184,7 +187,7 @@ def get_ssh(host):
 
 
 def exe_remote(host, cmd, fail_ok=False):
-    print("Running remote command {} on host {}:".format(cmd, host))
+    dprint("Running remote command {} on host {}:".format(cmd, host))
     ssh = get_ssh(host)
     _, stdout, stderr = ssh.exec_command(cmd)
     exit_status = stdout.channel.recv_exit_status()
@@ -235,3 +238,16 @@ def putf_remote(host, local, file):
 def rand_file_name(directory):
     return os.path.join(directory, ''.join([
         random.choice(string.ascii_letters) for _ in range(10)]))
+
+
+def get_hostname(host):
+    if host == 'local':
+        hostname = platform.node().strip()
+    else:
+        hostname = exe_remote(host, "hostname").strip()
+    return hostname
+
+
+def dprint(*args, **kwargs):
+    if scaffold.VERBOSE:
+        print(*args, **kwargs)
