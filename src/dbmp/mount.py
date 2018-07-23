@@ -8,7 +8,7 @@ from dfs_sdk import exceptions as dat_exceptions
 
 from dbmp.volume import ais_from_vols, parse_vol_opt
 from dbmp.utils import Parallel, exe, check_install, exe_remote_py
-from dbmp.utils import get_hostname, dprint
+from dbmp.utils import get_hostname, dprint, locker
 
 DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
 
@@ -48,7 +48,11 @@ def clean_mounts(api, vols, directory, workers):
     for ai in ais:
         for si in ai.storage_instances.list():
             iqn = si.access.get('iqn')
+            dprint("Cleaning {},{} portals {}, iqn {}".format(
+                ai.name, si.name, si.access['ips'], si.access.get('iqn')))
             if not iqn:
+                dprint("{},{} did not have an iqn field".format(
+                    ai.name, si.name))
                 continue
             portals = si.access['ips']
             for vol in si.volumes.list():
@@ -164,7 +168,8 @@ def _get_initiator():
         raise
 
 
-def _setup_acl(api, ai):
+@locker
+def _setup_initiator(api):
     initiator = _get_initiator()
     host = exe('hostname').strip()
     initiator_obj = None
@@ -179,9 +184,14 @@ def _setup_acl(api, ai):
             raise dat_exceptions.ApiNotFoundError()
     except dat_exceptions.ApiNotFoundError:
         initiator_obj = api.initiators.create(name=host, id=initiator)
+    return initiator_obj
+
+
+def _setup_acl(api, ai):
+    initiator = _setup_initiator(api)
     for si in ai.storage_instances.list():
         try:
-            si.acl_policy.initiators.add(initiator_obj)
+            si.acl_policy.initiators.add(initiator.path)
         except dat_exceptions.ApiConflictError:
             dprint("ACL already registered for {},{}".format(ai.name, si.name))
     dprint("Setting up ACLs for {} targets".format(ai.name))
@@ -249,7 +259,9 @@ def _login(iqn, portals, multipath, lun):
                     exe("sudo iscsiadm -m node -T {iqn} -p {ip}:3260 "
                         "--login".format(iqn=iqn, ip=portal))
                     break
-                except EnvironmentError:
+                except EnvironmentError as e:
+                    if 'returned non-zero exit status 15' in str(e):
+                        break
                     retries -= 1
                     if not retries:
                         dprint("Could not log into portal before end of "

@@ -29,6 +29,7 @@ DBMP_REPO = 'http://github.com/Datera/dbmp'
 ASSETS = os.path.join(
         os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))), 'assets')
+LOCKS = {}
 
 
 class Parallel(object):
@@ -251,3 +252,13 @@ def get_hostname(host):
 def dprint(*args, **kwargs):
     if scaffold.VERBOSE:
         print(*args, **kwargs)
+
+
+def locker(func):
+    def _wrapper(*args, **kwargs):
+        n = func.__name__
+        if n not in LOCKS:
+            LOCKS[n] = threading.Lock()
+        with LOCKS[n]:
+            return func(*args, **kwargs)
+    return _wrapper

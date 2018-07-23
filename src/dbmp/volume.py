@@ -233,24 +233,18 @@ def create_volumes(host, api, vopt, workers):
     return results
 
 
-def _clean_volume(ai, opts):
-    if ai.name.startswith(opts['prefix']):
-        dprint("Cleaning volume:", ai.name)
-        ai.set(admin_state='offline', force=True)
-        ai.delete(force=True)
+def _clean_volume(ai):
+    dprint("Cleaning volume:", ai.name)
+    ai.set(admin_state='offline', force=True)
+    ai.delete(force=True)
 
 
 def clean_volumes(api, vopt, workers):
     print("Cleaning volumes matching:", vopt)
-    opts = parse_vol_opt(vopt)
-    if 'sis' in opts:
-        opts['prefix'] = opts['name']
-    elif 'prefix' not in opts:
-        print("No prefix specified, using default, if all volumes should be "
-              "cleaned, use --volume name=all")
+    ais = ais_from_vols(api, vopt)
     funcs, args = [], []
-    for ai in api.app_instances.list():
+    for ai in ais:
         funcs.append(_clean_volume)
-        args.append((ai, opts))
+        args.append((ai,))
     p = Parallel(funcs, args_list=args, max_workers=workers)
     p.run_threads()

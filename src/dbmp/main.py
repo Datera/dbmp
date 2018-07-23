@@ -87,6 +87,8 @@ def main(args):
         for vol in args.volume:
             clean_volumes(api, vol, args.workers)
         return SUCCESS
+    if args.logout:
+        return SUCCESS
 
     vols = None
     for vol in args.volume:
