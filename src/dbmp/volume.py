@@ -180,7 +180,8 @@ def list_templates(api, detail):
 def _create_volume(hostname, api, opts, i, results):
     name = opts.get('prefix', hostname) + '-' + str(i)
     if opts['template']:
-        api.app_instances.create(name=name, app_template=opts['template'])
+        at = {'path': '/app_templates/{}'.format(opts['template'])}
+        ai = api.app_instances.create(name=name, app_template=at)
     else:
         ai = api.app_instances.create(name=name)
         si = ai.storage_instances.create(name=STORE_NAME)
