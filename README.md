@@ -49,6 +49,7 @@ Functionality can be broken down into a few categories
 * Login/Logout
 * Mount/Unmount
 * Load Generation
+* Metrics
 * Topology
 
 ### Creation
@@ -193,8 +194,8 @@ would have mounts in the following locations
 
 ### Load Generation
 
-You can have DBMP generate FIO against all created mounts (or devices) via by
-adding ``--fio`` to the invocation.
+You can have DBMP generate an FIO file against all created mounts (or devices)
+via by adding ``--fio`` to the invocation.
 
 ```bash
 $ ./dbmp --volume my-complex-vol.json --mount --fio
@@ -248,6 +249,88 @@ If the ``--mount`` flag has not been passed in, then instead of "directory",
 
 To specify your own FIO workload, use the ``--fio-workload`` flag.  Your
 workload MUST only have a [global] section
+
+### Metrics
+
+Metrics can be viewed for any volume created by DBMP using the following
+invocation
+
+```bash
+$ ./dbmp --volume prefix=my-vol,count=1 --metrics 5,20
+```
+
+Example Output:
+
+```json
+{
+    "test-vol-0": {
+        "iops_write": [
+            {
+                "value": 110,
+                "time": 1532722856000
+            },
+            {
+                "value": 88,
+                "time": 1532722860000
+            },
+            {
+                "value": 102,
+                "time": 1532722866000
+            },
+            {
+                "value": 101,
+                "time": 1532722870000
+            }
+        ]
+    }
+}
+```
+
+The ``--metrics`` flag takes two comma separated values: ``interval,timeout``
+which correspond to the interval between metric update calls and the timeout
+before metric calls should end respectively.
+
+By default the metric will be ``iops_write``, but you can change this using
+the ``--metrics-type`` flag.  The available choices are below:
+
+* reads
+* writes
+* bytes\_read,
+* bytes\_written
+* iops\_read
+* iops\_write,
+* thpt\_read
+* thpt\_write
+* lat\_avg\_read,
+* lat\_avg\_write
+* lat\_50\_read
+* lat\_90\_read,
+* lat\_100\_read
+* lat\_50\_write,
+* lat\_90\_write
+* lat\_100\_write
+
+Multiple of these can be specified by repeating the ``--metrics-type`` flag
+
+Output can be controlled via the ``--metrics-out-file`` flag.  This just takes
+a string specifying where the metrics should be saved.  The default is
+``metrics-out.json``.  Use the string ``'stdout'`` to force metrics to be
+printed to STDOUT instead of a file.
+
+Basic operations can be performed on the data via the ``--metrics-op`` flag.
+The following operations are currently supported (on a per-metric basis)
+
+* None
+* average
+* max
+* min
+* total-average (for all app\_instances)
+* total-max (for all app\_instances)
+* total-min (for all app\_instances)
+
+The output format will change depending on the operation and the original data
+is NOT preserved.
+
 
 ### Topology
 
