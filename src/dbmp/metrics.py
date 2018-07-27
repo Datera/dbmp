@@ -62,55 +62,41 @@ def _get_metric(api, results, ai, metrics, interval, timeout):
 
 
 def _do_average(results):
-    for name, v1 in results.items():
-        for m, v2 in v1.items():
-            results[name][m] = int(
-                sum([elem['value'] for elem in v2]) / len(v2))
+    _func_helper(results, _average)
 
 
 def _do_max(results):
-    for name, v1 in results.items():
-        for m, v2 in v1.items():
-            results[name][m] = max([elem['value'] for elem in v2])
+    _func_helper(results, max)
 
 
 def _do_min(results):
-    for name, v1 in results.items():
-        for m, v2 in v1.items():
-            results[name][m] = min([elem['value'] for elem in v2])
+    _func_helper(results, min)
 
 
 def _do_total_average(results):
-    newr = {}
-    for name, v1 in results.items():
-        for m, v2 in v1.items():
-            name = 'total_average_{}'.format(m)
-            if name not in results:
-                newr[name] = []
-            newr[name].extend([elem['value'] for elem in v2])
-    for k, v in newr.items():
-        newr[k] = int(sum(v) / len(v))
-    for k in results.keys():
-        del results[k]
-    results.update(newr)
+    _total_helper(results, _average)
 
 
 def _do_total_max(results):
-    newr = {}
-    for name, v1 in results.items():
-        for m, v2 in v1.items():
-            name = 'total_max_{}'.format(m)
-            if name not in results:
-                newr[name] = []
-            newr[name].extend([elem['value'] for elem in v2])
-    for k, v in newr.items():
-        newr[k] = max(v)
-    for k in results.keys():
-        del results[k]
-    results.update(newr)
+    _total_helper(results, max)
 
 
 def _do_total_min(results):
+    _total_helper(results, min)
+
+
+def _average(v):
+    return int(sum(v) / len(v))
+
+
+def _func_helper(results, func):
+    for name, v1 in results.items():
+        for m, v2 in v1.items():
+            v = [elem['value'] for elem in v2]
+            results[name][m] = func(v)
+
+
+def _total_helper(results, func):
     newr = {}
     for name, v1 in results.items():
         for m, v2 in v1.items():
@@ -119,7 +105,7 @@ def _do_total_min(results):
                 newr[name] = []
             newr[name].extend([elem['value'] for elem in v2])
     for k, v in newr.items():
-        newr[k] = min(v)
+        newr[k] = func(v)
     for k in results.keys():
         del results[k]
     results.update(newr)
