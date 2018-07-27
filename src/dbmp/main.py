@@ -3,21 +3,30 @@
 from __future__ import unicode_literals, print_function, division
 
 import argparse
+import json
 import sys
 import textwrap
 
 from dfs_sdk import scaffold
 # from dfs_sdk import exceptions as dexceptions
 
-from dbmp.volume import create_volumes, clean_volumes, list_volumes
-from dbmp.volume import list_templates
+from dbmp.metrics import get_metrics, write_metrics
 from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
 from dbmp.mount import clean_mounts_remote, list_mounts
 from dbmp.fio import gen_fio, gen_fio_remote
 from dbmp.utils import exe
+from dbmp.volume import create_volumes, clean_volumes, list_volumes
+from dbmp.volume import list_templates
 
 SUCCESS = 0
 FAILURE = 1
+
+METRIC_CHOICES = ('reads', 'writes', 'bytes_read',
+                  'bytes_written', 'iops_read', 'iops_write',
+                  'thpt_read', 'thpt_write', 'lat_avg_read',
+                  'lat_avg_write', 'lat_50_read', 'lat_90_read',
+                  'lat_100_read', 'lat_50_write',
+                  'lat_90_write', 'lat_100_write')
 
 
 def hf(txt):
@@ -115,6 +124,29 @@ def main(args):
         gen_fio(args.fio_workload, dev_or_folders)
     elif args.fio and args.run_host != 'local':
         gen_fio_remote(args.run_host, args.fio_workload, dev_or_folders)
+
+    if args.metrics:
+        data = None
+        try:
+            interval, timeout = map(int, args.metrics.split(','))
+            if interval < 1 or timeout < 1:
+                raise ValueError()
+            mtypes = args.metrics_type
+            if not args.metrics_type:
+                mtypes = ['iops_write']
+            data = get_metrics(
+                api, mtypes, args.volume, interval, timeout,
+                args.metrics_op)
+        except ValueError:
+            print("--metrics argument must be in format '--metrics i,t' where"
+                  "'i' is the interval in seconds and 't' is the timeout in "
+                  "seconds.  Both must be positive integers >= 1")
+            return FAILURE
+        if data:
+            write_metrics(data, args.metrics_out_file)
+        else:
+            print("No data recieved from metrics")
+            return FAILURE
     return SUCCESS
 
 
@@ -175,5 +207,24 @@ if __name__ == '__main__':
     parser.add_argument('--fio-workload',
                         help='Fio workload file to use.  If not specified, '
                              'default workload will be used')
+    parser.add_argument('--metrics', help=hf(
+                        'Run metrics with specified report interval and '
+                        'timeout in seconds --metrics 5,60 would get metrics '
+                        'every 5 seconds for 60 seconds'))
+    parser.add_argument('--metrics-type',
+                        metavar='',
+                        action='append',
+                        default=[],
+                        choices=METRIC_CHOICES,
+                        help=hf('Metric to retrieve.  Choices: {}'.format(
+                                json.dumps(METRIC_CHOICES))))
+    parser.add_argument('--metrics-op',
+                        choices=(None, 'average', 'max', 'min',
+                                 'total-average', 'total-max', 'total-min'),
+                        help='Operation to perform on metrics data.  For '
+                             'example: Averaging the results')
+    parser.add_argument('--metrics-out-file', default='metrics-out.json',
+                        help='Output file for metrics report.  Use "stdout" to'
+                        ' print metrics to STDOUT')
     args = parser.parse_args()
     sys.exit(main(args))
