@@ -100,6 +100,16 @@ def _mount_volume(api, ai, multipath, fs, fsargs, directory, login_only,
         _si_poll(si)
         si = si.reload()
         ac = si.access
+        timeout = 20
+        while timeout > 0:
+            si = si.reload()
+            ac = si.access
+            if 'iqn' in ac and 'ips' in ac:
+                break
+            timeout -= 1
+            time.sleep(1)
+        if timeout == 0:
+            raise ValueError("SI does not have an IQN or IPS: {}".format(ac))
         for i, vol in enumerate(si.volumes.list()):
             path = _login(ac['iqn'], ac['ips'], multipath, i)
             if login_only:
