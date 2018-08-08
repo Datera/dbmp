@@ -191,7 +191,7 @@ if __name__ == '__main__':
     parser.add_argument('--clean', action='store_true',
                         help='Deletes volumes (implies --unmount and '
                              '--logout)')
-    parser.add_argument('--workers', default=5,
+    parser.add_argument('--workers', default=5, type=int,
                         help='Number of worker threads for this action')
     parser.add_argument('--no-multipath', action='store_true')
     parser.add_argument('--fstype', default='xfs',
