@@ -106,14 +106,11 @@ def ais_from_vols(api, vols):
             print("No app_instance found matching name: {}".format(
                 opts['name']))
         return ais
-    for i in range(opts['count']):
-        try:
-            ai = api.app_instances.get(opts['prefix'] + '-' + str(i))
-            ais.append(ai)
-        except dat_exceptions.ApiNotFoundError:
-            print("No app_instance found matching prefix: {}".format(
-                opts['prefix']))
-            break
+    ais = api.app_instances.list(filter='match(name,{}.*)'.format(
+        opts['prefix']))
+    if not ais:
+        print("No app_instance found matching prefix: {}".format(
+            opts['prefix']))
     return ais
 
 
