@@ -181,7 +181,7 @@ def _setup_initiator(api):
         if not tenant:
             tenant = '/root'
         if initiator_obj.tenant != tenant:
-            raise dat_exceptions.ApiNotFoundError()
+            raise dat_exceptions.ApiNotFoundError(msg="Non matching tenant")
     except dat_exceptions.ApiNotFoundError:
         initiator_obj = api.initiators.create(name=host, id=initiator)
     return initiator_obj
