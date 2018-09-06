@@ -74,6 +74,9 @@ def main(args):
     if 'volumes' in args.list:
         for vol in args.volume:
             list_volumes(args.run_host, api, vol, detail='detail' in args.list)
+        else:
+            list_volumes(args.run_host, api, 'prefix=all', detail='detail' in
+                         args.list)
         return SUCCESS
     elif 'templates' in args.list:
         list_templates(api, detail='detail' in args.list)
@@ -81,6 +84,9 @@ def main(args):
         for vol in args.volume:
             list_mounts(args.run_host, api, vol, 'detail' in args.list,
                         not args.no_multipath)
+        else:
+            list_mounts(args.run_host, api, 'prefix=all', 'detail'
+                        in args.list, not args.no_multipath)
         return SUCCESS
 
     if any((args.unmount, args.logout, args.clean)):
