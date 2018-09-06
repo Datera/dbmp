@@ -11,9 +11,9 @@ from dfs_sdk import scaffold
 # from dfs_sdk import exceptions as dexceptions
 
 from dbmp.metrics import get_metrics, write_metrics
-from dbmp.mount import mount_volumes, mount_volumes_remote, clean_mounts
-from dbmp.mount import clean_mounts_remote, list_mounts
-from dbmp.fio import gen_fio, gen_fio_remote
+from dbmp.mount import mount_volumes, clean_mounts
+from dbmp.mount import list_mounts
+from dbmp.fio import gen_fio
 from dbmp.utils import exe
 from dbmp.volume import create_volumes, clean_volumes, list_volumes
 from dbmp.volume import list_templates
@@ -27,6 +27,13 @@ METRIC_CHOICES = ('reads', 'writes', 'bytes_read',
                   'lat_avg_write', 'lat_50_read', 'lat_90_read',
                   'lat_100_read', 'lat_50_write',
                   'lat_90_write', 'lat_100_write')
+
+
+# Py2/3 compat
+try:
+    input = raw_input
+except NameError:
+    pass
 
 
 def hf(txt):
@@ -71,31 +78,38 @@ def main(args):
             return FAILURE
         return SUCCESS
 
+    if args.force_initiator_creation:
+        resp = input(hf("Forcing initiator creation could result in I/O "
+                        "interruption for Volumes connected to the forced "
+                        "Initiator being created within this tenant.  Are you "
+                        "Sure you want to proceed? Y/n") + "\n")
+        if resp != "Y":
+            print("Recieved negative confirmation, exiting")
+            return FAILURE
+        else:
+            print("Recieved positive confirmation.  Continuing")
+
     if 'volumes' in args.list:
         for vol in args.volume:
-            list_volumes(args.run_host, api, vol, detail='detail' in args.list)
+            list_volumes('local', api, vol, detail='detail' in args.list)
         else:
-            list_volumes(args.run_host, api, 'prefix=all', detail='detail' in
+            list_volumes('local', api, 'prefix=all', detail='detail' in
                          args.list)
         return SUCCESS
     elif 'templates' in args.list:
         list_templates(api, detail='detail' in args.list)
     elif 'mounts' in args.list:
         for vol in args.volume:
-            list_mounts(args.run_host, api, vol, 'detail' in args.list,
+            list_mounts('local', api, vol, 'detail' in args.list,
                         not args.no_multipath)
         else:
-            list_mounts(args.run_host, api, 'prefix=all', 'detail'
+            list_mounts('local', api, 'prefix=all', 'detail'
                         in args.list, not args.no_multipath)
         return SUCCESS
 
     if any((args.unmount, args.logout, args.clean)):
         for vol in args.volume:
-            if args.run_host == 'local':
-                clean_mounts(api, vol, args.directory, args.workers)
-            else:
-                clean_mounts_remote(
-                    args.run_host, vol, args.directory, args.workers)
+            clean_mounts(api, vol, args.directory, args.workers)
             if args.unmount:
                 return SUCCESS
     if args.clean:
@@ -107,17 +121,14 @@ def main(args):
 
     vols = None
     for vol in args.volume:
-        vols = create_volumes(args.run_host, api, vol, args.workers)
+        vols = create_volumes("local", api, vol, args.workers)
 
     login_only = not args.mount and args.login
-    if (args.mount or args.login) and vols and args.run_host == 'local':
+    if (args.mount or args.login) and vols:
         dev_or_folders = mount_volumes(
             api, vols, not args.no_multipath, args.fstype, args.fsargs,
-            args.directory, args.workers, login_only)
-    elif (args.mount or args.login) and vols and args.run_host != 'local':
-        dev_or_folders = mount_volumes_remote(
-            args.run_host, vols, not args.no_multipath, args.fstype,
-            args.fsargs, args.directory, args.workers, login_only)
+            args.directory, args.workers, login_only,
+            args.force_initiator_creation)
 
     if args.fio:
         try:
@@ -126,10 +137,8 @@ def main(args):
             print("FIO is not installed")
     if args.fio and (not args.mount and not args.login):
         print("--mount or --login MUST be specified when using --fio")
-    elif args.fio and args.run_host == 'local':
+    elif args.fio:
         gen_fio(args.fio_workload, dev_or_folders)
-    elif args.fio and args.run_host != 'local':
-        gen_fio_remote(args.run_host, args.fio_workload, dev_or_folders)
 
     if args.metrics:
         data = None
@@ -160,11 +169,6 @@ if __name__ == '__main__':
     tparser = scaffold.get_argparser(add_help=False)
     parser = argparse.ArgumentParser(
         parents=[tparser], formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('--run-host', default='local',
-                        help=hf('Host on which targets should be logged in.'
-                                ' This value will be a key in your '
-                                '"dbmp-topology.json" file. Use "local" for'
-                                'the current host'))
     parser.add_argument('--health', action='store_true',
                         help='Run a quick health check')
     parser.add_argument('--list', choices=('volumes', 'volumes-detail',
@@ -194,6 +198,10 @@ if __name__ == '__main__':
                         help='Mount volumes, (implies --login)')
     parser.add_argument('--unmount', action='store_true',
                         help='Unmount volumes only.  Does not delete volume')
+    parser.add_argument('--force-initiator-creation', action='store_true',
+                        help='Force initiator creation. WARNING: This might'
+                             ' result in I/O interruption to volumes attached'
+                             ' to inherited initiator')
     parser.add_argument('--clean', action='store_true',
                         help='Deletes volumes (implies --unmount and '
                              '--logout)')

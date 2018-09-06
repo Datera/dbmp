@@ -75,13 +75,13 @@ def _unmount(ai_name, si_name, vol_name, directory):
 
 
 def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers,
-                  login_only):
+                  login_only, force_init):
     funcs, args = [], []
     results = []
     for ai in vols:
         funcs.append(_mount_volume)
         args.append((api, ai, multipath, fs, fsargs, directory, login_only,
-                     results))
+                     results, force_init))
     if funcs:
         p = Parallel(funcs, args_list=args, max_workers=workers)
         p.run_threads()
@@ -93,8 +93,8 @@ def get_dirname(directory, ai_name, si_name, vol_name):
 
 
 def _mount_volume(api, ai, multipath, fs, fsargs, directory, login_only,
-                  results):
-    _setup_acl(api, ai)
+                  results, force_init):
+    _setup_acl(api, ai, force_init)
     ai.set(admin_state='online')
     for si in ai.storage_instances.list():
         _si_poll(si)
@@ -169,7 +169,7 @@ def _get_initiator():
 
 
 @locker
-def _setup_initiator(api):
+def _setup_initiator(api, force):
     initiator = _get_initiator()
     host = exe('hostname').strip()
     initiator_obj = None
@@ -185,14 +185,14 @@ def _setup_initiator(api):
     except dat_exceptions.ApiNotFoundError:
         try:
             initiator_obj = api.initiators.create(
-                name=host, id=initiator, force=True)
-        except dat_exceptions.ApiInvalidRequestErorr:
+                name=host, id=initiator, force=force)
+        except dat_exceptions.ApiInvalidRequestError:
             initiator_obj = api.initiators.create(name=host, id=initiator)
     return initiator_obj
 
 
-def _setup_acl(api, ai):
-    initiator = _setup_initiator(api)
+def _setup_acl(api, ai, force_init):
+    initiator = _setup_initiator(api, force_init)
     for si in ai.storage_instances.list():
         try:
             si.acl_policy.initiators.add(initiator.path)
