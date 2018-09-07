@@ -4,6 +4,8 @@ from __future__ import unicode_literals, print_function, division
 import copy
 import io
 import json
+import socket
+
 from dfs_sdk import exceptions as dat_exceptions
 
 from dbmp.utils import Parallel, get_hostname, dprint
@@ -11,7 +13,7 @@ from dbmp.utils import Parallel, get_hostname, dprint
 STORE_NAME = 'storage-1'
 VOL_NAME = 'volume-1'
 VOL_DEFAULTS = {'size': 1,
-                'prefix': 'args.run_host',
+                'prefix': socket.gethostname(),
                 'count': 1,
                 'replica': 3,
                 'placement_mode': 'hybrid',
