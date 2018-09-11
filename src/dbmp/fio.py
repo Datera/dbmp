@@ -3,10 +3,8 @@ from __future__ import unicode_literals, print_function, division
 import io
 import os
 import tempfile
-from StringIO import StringIO
 
-from dbmp.utils import ASSETS, exe, putf_remote, rand_file_name, check_install
-from dbmp.utils import exe_remote_py
+from dbmp.utils import ASSETS, exe
 
 FIO_DEFAULT = os.path.join(ASSETS, 'fiotemplate.fio')
 
@@ -25,17 +23,6 @@ def run_fio_from_file(fiofile):
     print("Running FIO job")
     print(fiofile)
     exe("sudo fio {}".format(fiofile))
-
-
-def gen_fio_remote(host, vols, fiofile, directory):
-    fio = _setup(vols, fiofile, directory)
-    fname = rand_file_name('/tmp')
-    putf_remote(host, StringIO(fio), fname)
-    check_install(host)
-    exe_remote_py(
-        host,
-        'fio.py '
-        '--fio-workload {}'.format(fname))
 
 
 def _setup(fiofile, dev_or_folders):

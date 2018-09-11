@@ -7,39 +7,10 @@ import time
 from dfs_sdk import exceptions as dat_exceptions
 
 from dbmp.volume import ais_from_vols, parse_vol_opt
-from dbmp.utils import Parallel, exe, check_install, exe_remote_py
+from dbmp.utils import Parallel, exe
 from dbmp.utils import get_hostname, dprint, locker
 
 DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
-
-
-def mount_volumes_remote(host, vols, multipath, fs, fsargs, directory,
-                         workers, login_only):
-    check_install(host)
-    m = '--multipath' if multipath else ''
-    vs = ','.join([v.name for v in vols])
-    fa = '"{}"'.format(fsargs)
-    lo = '--login-only' if login_only else ''
-    exe_remote_py(
-        host,
-        'mount.py '
-        '--vols {} '
-        '{} '
-        '--fs {} '
-        '--fsargs {} '
-        '--directory {} '
-        '--workers {} '
-        '{}'.format(vs, m, fs, fa, directory, workers, lo))
-
-
-def clean_mounts_remote(host, vols, directory, workers):
-    check_install(host)
-    exe_remote_py(
-        host,
-        'clean_mount.py '
-        '--vols {} '
-        '--directory {} '
-        '--workers {}'.format(vols, directory, workers))
 
 
 def clean_mounts(api, vols, directory, workers):
