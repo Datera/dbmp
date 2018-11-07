@@ -187,18 +187,22 @@ def _get_multipath_disk(path):
     # Fallback to iterating through all the entries under /sys/block/dm-* and
     # check to see if any have an entry under /sys/block/dm-*/slaves matching
     # the device the symlink was pointing at
-    dmpaths = glob.glob("/sys/block/dm-*")
-    for dmpath in dmpaths:
-        sdevices = glob.glob(os.path.join(dmpath, "slaves", "*"))
-        for spath in sdevices:
-            s = os.path.basename(spath)
-            if sdevice == s:
-                # We've found a matching entry, return the path for the
-                # dm-* device it was found under
-                p = os.path.join("/dev", os.path.basename(dmpath))
-                dprint("Found matching device: {} under dm-* device path "
-                       "{}".format(sdevice, dmpath))
-                return p
+    timeout = 10
+    while timeout > 0:
+        dmpaths = glob.glob("/sys/block/dm-*")
+        for dmpath in dmpaths:
+            sdevices = glob.glob(os.path.join(dmpath, "slaves", "*"))
+            for spath in sdevices:
+                s = os.path.basename(spath)
+                if sdevice == s:
+                    # We've found a matching entry, return the path for the
+                    # dm-* device it was found under
+                    p = os.path.join("/dev", os.path.basename(dmpath))
+                    dprint("Found matching device: {} under dm-* device path "
+                           "{}".format(sdevice, dmpath))
+                    return p
+        timeout -= 1
+        time.sleep(1)
     raise EnvironmentError(
         "Couldn't find dm-* path for path: {}, found non dm-* path: {}".format(
             path, device_path))
