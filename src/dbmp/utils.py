@@ -31,6 +31,12 @@ ASSETS = os.path.join(
             os.path.dirname(os.path.abspath(__file__))), 'assets')
 LOCKS = {}
 
+# Python 2/3 compat
+try:
+    unicode
+except NameError:
+    unicode = str
+
 
 class Parallel(object):
 
@@ -114,7 +120,7 @@ class Parallel(object):
                     raise ValueError(msg)
                 self.queue.put((func, args, kwargs))
 
-            for _ in xrange(self.max_workers):
+            for _ in range(self.max_workers):
                 thread = threading.Thread(target=self._wrapped)
                 thread.setDaemon(True)
                 thread.start()

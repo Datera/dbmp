@@ -4,11 +4,19 @@ from __future__ import unicode_literals, print_function, division
 import copy
 import io
 import json
+import os
+import random
 import socket
+import string
+import threading
+
+import six
 
 from dfs_sdk import exceptions as dat_exceptions
 
 from dbmp.utils import Parallel, get_hostname, dprint
+
+FLOCK = threading.Lock()
 
 STORE_NAME = 'storage-1'
 VOL_NAME = 'volume-1'
@@ -18,7 +26,8 @@ VOL_DEFAULTS = {'size': 1,
                 'replica': 3,
                 'placement_mode': 'hybrid',
                 'template': None,
-                'qos': {}}
+                'qos': {},
+                'object': False}
 
 MULTI_VOL_TEMPLATE = {'name': 'app-1',
                       'sis': [
@@ -28,24 +37,32 @@ MULTI_VOL_TEMPLATE = {'name': 'app-1',
                                 'size': 1,
                                 'replica': 3,
                                 'placement_mode': 'hybrid',
-                                'qos': {}},
+                                'qos': {},
+                                'object': False},
                                {'name': 'volume-1',
                                 'size': 1,
                                 'replica': 3,
                                 'placement_mode': 'hybrid',
-                                'qos': {}}]},
+                                'qos': {},
+                                'object': False}]},
                           {'name': 'storage-2',
                            'vols': [
                                {'name': 'volume-1',
                                 'size': 1,
                                 'replica': 3,
                                 'placement_mode': 'hybrid',
-                                'qos': {}},
+                                'qos': {},
+                                'object': False},
                                {'name': 'volume-1',
                                 'size': 1,
                                 'replica': 3,
                                 'placement_mode': 'hybrid',
-                                'qos': {}}]}]}
+                                'qos': {},
+                                'object': False}]}]}
+
+ACCESS_KEY_CHARS = string.ascii_uppercase + string.digits
+SECRET_KEY_CHARS = string.ascii_letters + string.digits + '/' + '+'
+KEYFILE = ".dbmp-obj-keys"
 
 
 def _is_valid(k):
@@ -61,9 +78,63 @@ def _is_valid(k):
     return False
 
 
+def gen_keys():
+    return [''.join([random.choice(ACCESS_KEY_CHARS) for _ in range(20)]),
+            ''.join([random.choice(SECRET_KEY_CHARS) for _ in range(40)])]
+
+
+def save_keys(vol_name, ak, sk):
+    with FLOCK:
+        data = {}
+        if os.path.exists(KEYFILE):
+            with io.open(KEYFILE, 'r') as f:
+                data = json.load(f)
+        data[vol_name] = [ak, sk]
+        with io.open(KEYFILE, 'w+') as f:
+            f.write(six.u(json.dumps(data, indent=4)))
+
+
+def get_keys(vopt):
+    with FLOCK:
+        opts = parse_vol_opt(vopt)
+        keys = []
+        prefix = opts['prefix']
+        count = opts['count'] - 1
+        if os.path.exists(KEYFILE):
+            with io.open(KEYFILE, 'r') as f:
+                data = json.load(f)
+                while count > -1:
+                    n = '-'.join((prefix, str(count)))
+                    keys.append((n, data.get(n, (None, None))))
+                    count -= 1
+        return keys
+
+
+def del_keys(vopt):
+    with FLOCK:
+        opts = parse_vol_opt(vopt)
+        if not opts['object']:
+            return
+        prefix = opts['prefix']
+        count = opts['count'] - 1
+        data = {}
+        if os.path.exists(KEYFILE):
+            with io.open(KEYFILE, 'r') as f:
+                try:
+                    data = json.load(f)
+                except ValueError:
+                    pass
+                while count > -1:
+                    n = '-'.join((prefix, str(count)))
+                    data.pop(n, None)
+                    count -= 1
+        with io.open(KEYFILE, 'w+') as f:
+            f.write(six.u(json.dumps(data, indent=4)))
+
+
 def read_vol_opts(ifile):
     with io.open(ifile, 'r') as f:
-        return json.loads(f.read())
+        return json.load(f)
 
 
 def parse_vol_opt(s):
@@ -178,12 +249,16 @@ def list_templates(api, detail):
 
 def _create_volume(hostname, api, opts, i, results):
     name = opts.get('prefix', hostname) + '-' + str(i)
+    sc = "object" if opts['object'] else 'iscsi'
+    ak, sk = None, None
     if opts['template']:
         at = {'path': '/app_templates/{}'.format(opts['template'])}
         ai = api.app_instances.create(name=name, app_template=at)
     else:
         ai = api.app_instances.create(name=name)
-        si = ai.storage_instances.create(name=STORE_NAME)
+        si = ai.storage_instances.create(
+            name=STORE_NAME,
+            service_configuration=sc)
         vol = si.volumes.create(
             name=VOL_NAME,
             replica_count=opts['replica'],
@@ -192,7 +267,15 @@ def _create_volume(hostname, api, opts, i, results):
         qos = opts['qos']
         if qos:
             vol.performance_policy.create(**qos)
-    print("Created volume:", name)
+        if opts['object']:
+            ak, sk = gen_keys()
+            si.auth.set(type="access_keys", access_key=ak, secret_key=sk)
+            save_keys(name, ak, sk)
+    if ak and sk:
+        print("Created Object Store:", name)
+        print("Access Credentials:", ak, sk)
+    else:
+        print("Created volume:", name)
     results.append(ai)
 
 

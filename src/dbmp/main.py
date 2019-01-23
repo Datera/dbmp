@@ -16,7 +16,7 @@ from dbmp.mount import list_mounts
 from dbmp.fio import gen_fio
 from dbmp.utils import exe
 from dbmp.volume import create_volumes, clean_volumes, list_volumes
-from dbmp.volume import list_templates
+from dbmp.volume import list_templates, get_keys, del_keys
 
 SUCCESS = 0
 FAILURE = 1
@@ -109,6 +109,7 @@ def main(args):
 
     if any((args.unmount, args.logout, args.clean)):
         for vol in args.volume:
+            del_keys(vol)
             clean_mounts(api, vol, args.directory, args.workers)
             if args.unmount:
                 return SUCCESS
@@ -122,6 +123,11 @@ def main(args):
     vols = None
     for vol in args.volume:
         vols = create_volumes("local", api, vol, args.workers)
+
+    if args.get_keys:
+        for vol in args.volume:
+            for n, keys in get_keys(vol):
+                print(n, ":", ' '.join(map(str, keys)))
 
     login_only = not args.mount and args.login
     if (args.mount or args.login) and vols:
@@ -185,8 +191,9 @@ if __name__ == '__main__':
                              '* replica, default=3\n'
                              '* <any supported qos param, eg: read_iops_max>\n'
                              '* placement_mode, default=hybrid\n'
-                             '      choices: hybrid|single_flash|all_flash\n'
-                             '* template, default=None\n \n'
+                             '    choices: hybrid|single_flash|all_flash\n'
+                             '* template, default=None\n'
+                             '* object, default=False\n'
                              'Example: prefix=test,size=2,replica=2\n \n'
                              'Alternatively a json file with the above\n'
                              'parameters can be specified')
@@ -240,5 +247,7 @@ if __name__ == '__main__':
     parser.add_argument('--metrics-out-file', default='metrics-out.json',
                         help='Output file for metrics report.  Use "stdout" to'
                         ' print metrics to STDOUT')
+    parser.add_argument('--get-keys', action='store_true',
+                        help='Get the object keys for the specified volumes')
     args = parser.parse_args()
     sys.exit(main(args))
