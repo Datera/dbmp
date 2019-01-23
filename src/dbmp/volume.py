@@ -187,7 +187,7 @@ def ais_from_vols(api, vols):
     return ais
 
 
-def _print_vol_tree(ai, detail):
+def _print_vol_tree(ai, detail, snodes):
     if detail:
         print(ai.name, ai.admin_state)
     else:
@@ -195,19 +195,26 @@ def _print_vol_tree(ai, detail):
     if detail:
         sis = ai.storage_instances.list()
         for i, si in enumerate(sis):
+            asns = map(lambda x: x['path'].split('/')[-1],
+                       si.active_storage_nodes)
+            asns = map(lambda x: snodes[x], asns)
             if i < len(sis) - 1:
                 add = '|'
             else:
                 add = ' '
             print('    |')
-            print('    ∟ {} {} {}'.format(
+            print('    ∟ {} {} {} {}'.format(
                 si.name, si.access.get('iqn'),
-                json.dumps(si.access.get('ips', []))))
+                json.dumps(si.access.get('ips', [])),
+                json.dumps(asns)))
             for vol in si.volumes.list():
+                vasns = map(lambda x: x['path'].split('/')[-1],
+                            vol.active_storage_nodes)
+                vasns = map(lambda x: snodes[x], vasns)
                 print('    {}    |'.format(add))
-                print('    {}   ∟ {} {}GB {}-replica {}'.format(
+                print('    {}    ∟ {} {}GB {}-replica {} {}'.format(
                     add, vol.name, vol.size, vol.replica_count,
-                    vol.placement_mode))
+                    vol.placement_mode, json.dumps(vasns)))
 
 
 def _print_tmpl_tree(tmpl, detail):
@@ -231,12 +238,15 @@ def _print_tmpl_tree(tmpl, detail):
 def list_volumes(host, api, vopt, detail):
     opts = parse_vol_opt(vopt)
     hostname = get_hostname(host)
+    snodes = {}
+    if detail:
+        snodes = {sn.uuid: sn.name for sn in api.storage_nodes.list()}
     for ai in sorted(api.app_instances.list(), key=lambda x: x.name):
         if (opts.get('prefix') == 'all' or
                 opts.get('name') == ai.name or
                 ai.name.startswith(opts.get('prefix', hostname))):
             print('-------')
-            _print_vol_tree(ai, detail)
+            _print_vol_tree(ai, detail, snodes)
     print('-------')
 
 
