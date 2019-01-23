@@ -92,7 +92,7 @@ def main(args):
     if 'volumes' in args.list:
         for vol in args.volume:
             list_volumes('local', api, vol, detail='detail' in args.list)
-        else:
+        if not args.volume:
             list_volumes('local', api, 'prefix=all', detail='detail' in
                          args.list)
         return SUCCESS
