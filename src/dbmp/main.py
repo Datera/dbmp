@@ -8,12 +8,12 @@ import sys
 import textwrap
 
 from dfs_sdk import scaffold
-# from dfs_sdk import exceptions as dexceptions
 
 from dbmp.metrics import get_metrics, write_metrics
 from dbmp.mount import mount_volumes, clean_mounts
 from dbmp.mount import list_mounts
 from dbmp.fio import gen_fio
+from dbmp.vdbench import gen_vdb
 from dbmp.utils import exe
 from dbmp.volume import create_volumes, clean_volumes, list_volumes
 from dbmp.volume import list_templates, get_keys, del_keys
@@ -145,6 +145,8 @@ def main(args):
         print("--mount or --login MUST be specified when using --fio")
     elif args.fio:
         gen_fio(args.fio_workload, dev_or_folders)
+    elif args.vdbench:
+        gen_vdb(dev_or_folders)
 
     if args.metrics:
         data = None
@@ -224,10 +226,14 @@ if __name__ == '__main__':
     parser.add_argument('--directory', default='/mnt',
                         help='Directory under which to mount devices')
     parser.add_argument('--fio', action='store_true',
-                        help='Run fio workload against mounted volumes')
+                        help='Generate fio workload for mounted/logged-in '
+                             'volumes')
     parser.add_argument('--fio-workload',
                         help='Fio workload file to use.  If not specified, '
                              'default workload will be used')
+    parser.add_argument('--vdbench', action='store_true',
+                        help='Generated vdbench workload for mounted/logged-in'
+                             ' volumes')
     parser.add_argument('--metrics', help=hf(
                         'Run metrics with specified report interval and '
                         'timeout in seconds --metrics 5,60 would get metrics '

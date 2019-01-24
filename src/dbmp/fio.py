@@ -14,6 +14,7 @@ def gen_fio(fiofile, dev_or_folders):
     with tempfile.NamedTemporaryFile(delete=False) as tf:
         tf.write(fio)
         tf.flush()
+        print()
         print("Generating FIO job: {}".format(tf.name))
         print("------------------")
         print(fio)
