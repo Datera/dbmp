@@ -10,6 +10,12 @@ def get_alerts(api):
     return api.alerts.list()
 
 
+def list_alerts(api):
+    alerts = get_alerts(api)
+    for alert in alerts:
+        print(json.dumps(json.loads(str(alert)), indent=4))
+
+
 def get_events(api, user):
     if user.lower() == "system":
         return api.events.system.list()
@@ -32,3 +38,9 @@ def prettify_events(events):
             except Exception as e:
                 pass
     return events
+
+
+def list_events(api, user):
+    events = get_events(api, user)
+    for event in events:
+        print(json.dumps(json.loads(str(event)), indent=4))

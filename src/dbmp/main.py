@@ -9,7 +9,7 @@ import textwrap
 
 from dfs_sdk import scaffold
 
-from dbmp.events import get_alerts, get_events
+from dbmp.events import list_alerts, list_events
 from dbmp.metrics import get_metrics, write_metrics
 from dbmp.mount import mount_volumes, clean_mounts
 from dbmp.mount import list_mounts
@@ -79,17 +79,6 @@ def main(args):
             return FAILURE
         return SUCCESS
 
-    if args.alerts:
-        alerts = get_alerts(api)
-        for alert in alerts:
-            print(json.dumps(json.loads(str(alert)), indent=4))
-        return SUCCESS
-    if args.events:
-        events = get_events(api, args.events)
-        for event in events:
-            print(json.dumps(json.loads(str(event)), indent=4))
-        return SUCCESS
-
     if args.force_initiator_creation:
         resp = input(hf("Forcing initiator creation could result in I/O "
                         "interruption for Volumes connected to the forced "
@@ -117,6 +106,17 @@ def main(args):
         else:
             list_mounts('local', api, 'prefix=all', 'detail'
                         in args.list, not args.no_multipath)
+    elif 'alerts' in args.list:
+        list_alerts(api)
+        return SUCCESS
+    if 'events' in args.list:
+        if 'system' in args.list:
+            user = 'system'
+        if 'user' in args.list:
+            user = 'user'
+        if 'id' in args.list:
+            user = args.id
+        list_events(api, user)
         return SUCCESS
 
     if any((args.unmount, args.logout, args.clean)):
@@ -193,14 +193,11 @@ if __name__ == '__main__':
                         help='Run a quick health check')
     parser.add_argument('--list', choices=('volumes', 'volumes-detail',
                                            'templates', 'templates-detail',
-                                           'mounts', 'mounts-detail'),
+                                           'mounts', 'mounts-detail', 'alerts',
+                                           'events-system', 'events-user',
+                                           'events-id'),
                         default='',
                         help='List accessible Datera Resources')
-    parser.add_argument('--alerts', action='store_true')
-    parser.add_argument('--events',
-                        help='Dump events for user (use "system" for system '
-                             'events, "user" for user events or a uuid for '
-                             'a specific event)')
     parser.add_argument('--volume', action='append', default=[],
                         help='Supports the following comma separated params:\n'
                              ' \n'
@@ -272,5 +269,6 @@ if __name__ == '__main__':
                         ' print metrics to STDOUT')
     parser.add_argument('--get-keys', action='store_true',
                         help='Get the object keys for the specified volumes')
+    parser.add_argument('id', nargs='?')
     args = parser.parse_args()
     sys.exit(main(args))
