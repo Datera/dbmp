@@ -9,7 +9,7 @@ import textwrap
 
 from dfs_sdk import scaffold
 
-from dbmp.events import list_alerts, list_events
+from dbmp.events import clear_alerts, list_alerts, list_events
 from dbmp.metrics import get_metrics, write_metrics
 from dbmp.mount import mount_volumes, clean_mounts
 from dbmp.mount import list_mounts
@@ -119,6 +119,10 @@ def main(args):
         list_events(api, user)
         return SUCCESS
 
+    if args.clear_alerts:
+        clear_alerts(api)
+        return SUCCESS
+
     if any((args.unmount, args.logout, args.clean)):
         for vol in args.volume:
             del_keys(vol)
@@ -198,6 +202,7 @@ if __name__ == '__main__':
                                            'events-id'),
                         default='',
                         help='List accessible Datera Resources')
+    parser.add_argument('--clear-alerts', action='store_true')
     parser.add_argument('--volume', action='append', default=[],
                         help='Supports the following comma separated params:\n'
                              ' \n'

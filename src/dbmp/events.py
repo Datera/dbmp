@@ -11,9 +11,13 @@ def get_alerts(api):
 
 
 def list_alerts(api):
-    alerts = get_alerts(api)
-    for alert in alerts:
+    for alert in get_alerts(api):
         print(json.dumps(json.loads(str(alert)), indent=4))
+
+
+def clear_alerts(api):
+    for alert in get_alerts(api):
+        alert.set(cleared=True)
 
 
 def get_events(api, user):
