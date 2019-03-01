@@ -39,7 +39,7 @@ def prettify_events(events):
         for k, v in event._data.items():
             try:
                 event._data[k] = json.loads(v)
-            except Exception as e:
+            except Exception:
                 pass
     return events
 

@@ -27,6 +27,7 @@ VOL_DEFAULTS = {'size': 1,
                 'placement_mode': 'hybrid',
                 'template': None,
                 'qos': {},
+                'placement_policy': None,
                 'object': False}
 
 MULTI_VOL_TEMPLATE = {'name': 'app-1',
@@ -212,9 +213,13 @@ def _print_vol_tree(ai, detail, snodes):
                             vol.active_storage_nodes)
                 vasns = map(lambda x: snodes[x], vasns)
                 print('    {}    |'.format(add))
+                if 'placement_policy' in vol:
+                    pp = vol['placement_policy']['path']
+                else:
+                    pp = vol['placement_mode']
                 print('    {}    ∟ {} {}GB {}-replica {} {}'.format(
-                    add, vol.name, vol.size, vol.replica_count,
-                    vol.placement_mode, json.dumps(vasns)))
+                    add, vol.name, vol.size, vol.replica_count, pp,
+                    json.dumps(vasns)))
 
 
 def _print_tmpl_tree(tmpl, detail):
@@ -230,9 +235,12 @@ def _print_tmpl_tree(tmpl, detail):
                 else:
                     add = ' '
                 print('    {}   |'.format(add))
+                if 'placement_policy' in vt:
+                    pp = vt['placement_policy']
+                else:
+                    pp = vt['placement_mode']
                 print('    {}   ∟ {} {}GB {}-replica {}'.format(
-                    add, vt.name, vt.size, vt.replica_count,
-                    vt.placement_mode))
+                    add, vt.name, vt.size, vt.replica_count, pp))
 
 
 def list_volumes(host, api, vopt, detail):
@@ -269,11 +277,20 @@ def _create_volume(hostname, api, opts, i, results):
         si = ai.storage_instances.create(
             name=STORE_NAME,
             service_configuration=sc)
-        vol = si.volumes.create(
-            name=VOL_NAME,
-            replica_count=opts['replica'],
-            size=opts['size'],
-            placement_mode=opts['placement_mode'])
+        pp = opts.get('placement_policy')
+        if not pp:
+            vol = si.volumes.create(
+                name=VOL_NAME,
+                replica_count=opts['replica'],
+                size=opts['size'],
+                placement_mode=opts['placement_mode'])
+        else:
+            vol = si.volumes.create(
+                name=VOL_NAME,
+                replica_count=opts['replica'],
+                size=opts['size'],
+                placement_policy={'path': '/placement_policy/{}'.format(
+                    opts['placement_policy'])})
         qos = opts['qos']
         if qos:
             vol.performance_policy.create(**qos)

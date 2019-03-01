@@ -18,6 +18,8 @@ from dbmp.vdbench import gen_vdb
 from dbmp.utils import exe
 from dbmp.volume import create_volumes, clean_volumes, list_volumes
 from dbmp.volume import list_templates, get_keys, del_keys
+from dbmp.placement_policy import create_media_policy, create_placement_policy
+from dbmp.placement_policy import list_placement_policies, list_media_policies
 
 SUCCESS = 0
 FAILURE = 1
@@ -118,6 +120,12 @@ def main(args):
             user = args.id
         list_events(api, user)
         return SUCCESS
+    if 'media-policy' in args.list:
+        list_media_policies(api)
+        return SUCCESS
+    if 'placement-policy' in args.list:
+        list_placement_policies(api)
+        return SUCCESS
 
     if args.clear_alerts:
         clear_alerts(api)
@@ -136,6 +144,14 @@ def main(args):
     if args.logout:
         return SUCCESS
 
+    # Create placement_policy/media_policy
+    for mp in args.media_policy:
+        create_media_policy(api, mp)
+
+    for pp in args.placement_policy:
+        create_placement_policy(api, mp)
+
+    # Create volumes
     vols = None
     for vol in args.volume:
         vols = create_volumes("local", api, vol, args.workers)
@@ -145,6 +161,7 @@ def main(args):
             for n, keys in get_keys(vol):
                 print(n, ":", ' '.join(map(str, keys)))
 
+    # Login/mount volumes
     login_only = not args.mount and args.login
     if (args.mount or args.login) and vols:
         dev_or_folders = mount_volumes(
@@ -152,6 +169,7 @@ def main(args):
             args.directory, args.workers, login_only,
             args.force_initiator_creation)
 
+    # Generate fio/vdbench output
     if args.fio:
         try:
             exe("which fio")
@@ -164,6 +182,7 @@ def main(args):
     elif args.vdbench:
         gen_vdb(dev_or_folders)
 
+    # Retrieve metrics
     if args.metrics:
         data = None
         try:
@@ -199,7 +218,8 @@ if __name__ == '__main__':
                                            'templates', 'templates-detail',
                                            'mounts', 'mounts-detail', 'alerts',
                                            'events-system', 'events-user',
-                                           'events-id'),
+                                           'events-id', 'placement-policy',
+                                           'media-policy'),
                         default='',
                         help='List accessible Datera Resources')
     parser.add_argument('--clear-alerts', action='store_true')
@@ -218,6 +238,20 @@ if __name__ == '__main__':
                              'Example: prefix=test,size=2,replica=2\n \n'
                              'Alternatively a json file with the above\n'
                              'parameters can be specified')
+    parser.add_argument('--placement-policy', action='append', default=[],
+                        help='Supports the following comma separated params:\n'
+                             '\n'
+                             '* name, required\n'
+                             '* max, required, semicolon separated '
+                             'media_policy names\n'
+                             '* min, semicolon separated media_policy names\n'
+                             '* desc')
+    parser.add_argument('--media-policy', action='append', default=[],
+                        help='Supports the following comma separated params\n'
+                             '\n'
+                             '* name, required\n'
+                             '* priority, required, integer\n'
+                             '* descr\n')
     parser.add_argument('--login', action='store_true',
                         help='Login volumes (implied by --mount)')
     parser.add_argument('--logout', action='store_true',

@@ -86,6 +86,7 @@ All attributes are optional and have the following default values:
 * count=1
 * replica=3
 * placement\_mode=hybrid
+* placement\_policy=None (This references the name attribute of the policy, eg: `all-flash`)
 * template=None
 * read\_iops\_max=0
 * write\_iops\_max=0
@@ -93,6 +94,8 @@ All attributes are optional and have the following default values:
 * read\_bw\_max=0
 * write\_bw\_max=0
 * total\_bw\_max=0
+
+**NOTE: placement\_policy will override placement\_mode**
 
 ### Complex Creation
 
