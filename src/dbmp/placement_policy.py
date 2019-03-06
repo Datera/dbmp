@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, division
 
+from dbmp.utils import dprint
+
+import dfs_sdk
 
 # Example --placement-policy "name=all-flash,max=all-flash,min=all-flash"
 # Example `--placement-policy \
 # "name=flash-write-optimized,max=all-flash;all-flash,min=all-flash;hybrid"`
+
 
 def parse_ppolicy_opts(p):
     opts = parse_csv_equals(p)
@@ -14,15 +18,17 @@ def parse_ppolicy_opts(p):
         raise ValueError("--placement-policy requires 'max' argument")
     if not opts.get('min', None):
         opts['min'] = opts['max']
-    opts['max'] = ['/media_policy/{}'.format(x)
+    opts['max'] = ['/media_policies/{}'.format(x)
                    for x in opts['max'].split(';')]
-    opts['min'] = ['/media_policy/{}'.format(x)
+    opts['min'] = ['/media_policies/{}'.format(x)
                    for x in opts['min'].split(';')]
     return opts
 
 
 def parse_mpolicy_opts(m):
-    return parse_csv_equals(m)
+    opts = parse_csv_equals(m)
+    opts['priority'] = int(opts['priority'])
+    return opts
 
 
 def parse_csv_equals(s):
@@ -43,8 +49,11 @@ def create_placement_policy(api, placement_policy):
 
 def delete_placement_policy(api, placement_policy):
     opts = parse_csv_equals(placement_policy)
-    pp = api.placement_policies.get(opts['name'])
-    return pp.delete()
+    try:
+        pp = api.placement_policies.get(opts['name'])
+        return pp.delete()
+    except dfs_sdk.exceptions.ApiNotFoundError:
+        dprint("Placement Policy {} not found".format(opts['name']))
 
 
 def list_placement_policies(api):
@@ -65,8 +74,11 @@ def create_media_policy(api, media_policy):
 
 def delete_media_policy(api, media_policy):
     opts = parse_csv_equals(media_policy)
-    mp = api.media_policies.get(opts['name'])
-    return mp.delete()
+    try:
+        mp = api.media_policies.get(opts['name'])
+        return mp.delete()
+    except dfs_sdk.exceptions.ApiNotFoundError:
+        dprint("Media Policy {} not found".format(opts['name']))
 
 
 def list_media_policies(api):

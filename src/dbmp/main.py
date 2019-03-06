@@ -20,6 +20,7 @@ from dbmp.volume import create_volumes, clean_volumes, list_volumes
 from dbmp.volume import list_templates, get_keys, del_keys
 from dbmp.placement_policy import create_media_policy, create_placement_policy
 from dbmp.placement_policy import list_placement_policies, list_media_policies
+from dbmp.placement_policy import delete_placement_policy, delete_media_policy
 
 SUCCESS = 0
 FAILURE = 1
@@ -140,6 +141,10 @@ def main(args):
     if args.clean:
         for vol in args.volume:
             clean_volumes(api, vol, args.workers)
+        for pp in args.placement_policy:
+            delete_placement_policy(api, pp)
+        for mp in args.media_policy:
+            delete_media_policy(api, mp)
         return SUCCESS
     if args.logout:
         return SUCCESS
@@ -149,7 +154,7 @@ def main(args):
         create_media_policy(api, mp)
 
     for pp in args.placement_policy:
-        create_placement_policy(api, mp)
+        create_placement_policy(api, pp)
 
     # Create volumes
     vols = None
