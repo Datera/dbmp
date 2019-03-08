@@ -3,4 +3,5 @@ paramiko
 requests
 six
 tabulate
+prompt_toolkit>=2.0.0
 git+http://github.com/Datera/python-sdk
