@@ -73,6 +73,19 @@ MPPROMPT_RE = re.compile(r"""name:\s*(?P<name>[\w\-]+)
 priority:\s*(?P<priority>\d+)
 descr:\s*(?P<descr>.*)""")
 
+CVPROMPT = r"""prefix: my-test
+count: 1"""
+
+CVPROMPT_RE = re.compile(r"""prefix:\s*(?P<prefix>[\w\-]+)
+count:\s*(?P<count>.+)""")
+
+CPPPROMPT = r"""name: my-placement-policy"""
+
+CPPPROMPT_RE = re.compile(r"""name:\s*(?P<name>.+)""")
+
+CMPPROMPT = r"""name: my-media-policy"""
+
+CMPPROMPT_RE = re.compile(r"""name:\s*(?P<name>.+)""")
 
 # @bindings.add('c-k')
 # def _(event):
@@ -153,28 +166,32 @@ def interactive(python):
     args = ''
     if not os.path.exists(HISTORY):
         io.open(HISTORY, 'w+').close()
-    while True:
-        pt.shortcuts.clear()
-        pt.shortcuts.set_title("Datera Bare-Metal Provisioner")
-        print("Welcome to the DBMP Interactive Session")
-        print("Would you like to provison, or clean up?")
-        out = session.prompt("choices: [(p)rovision, (c)lean]> ",
-                             default="provision").strip().lower()
-        print()
-        if out in {"p", "provision"}:
-            args = provision()
-        if out in {"c", "clean"}:
-            args = clean()
-        if out in QUIT:
-            if args:
-                print(args)
-            app_exit(0)
-        dbmp_exe(python, args)
+    try:
+        while True:
+            pt.shortcuts.clear()
+            pt.shortcuts.set_title("Datera Bare-Metal Provisioner")
+            print("Welcome to the DBMP Interactive Session")
+            print("Would you like to provison, or clean up?")
+            out = session.prompt("choices: [(p)rovision, (c)lean]> ",
+                                 default="p").strip().lower()
+            print()
+            if out in {"p", "provision"}:
+                args = provision()
+            if out in {"c", "clean"}:
+                args = clean()
+            if out in QUIT:
+                if args:
+                    print(args)
+                app_exit(0)
+            dbmp_exe(python, args)
+    except KeyboardInterrupt:
+        app_exit(1)
 
 
-def provision():
+def type_chooser(tp):
     pt.shortcuts.clear()
-    print("Please type everything you'd like to provision (<space> separated)")
+    print("Please type everything you'd like to {} "
+          "(<space> separated)".format(tp))
     print(pt.HTML(
         "Options are: ["
         "<red>volumes</red> "
@@ -185,7 +202,8 @@ def provision():
         "<red>v</red> "
         "<green>pp</green> "
         "<blue>mp</blue>]"))
-    print("If you would like to provision multiple different types of the ")
+    print("If you would like to {} multiple different types of the ".format(
+        tp))
     print("same resource, enter it multiple times")
     print("Press ENTER when finished")
     out = session.prompt("> ", default="v pp mp")
@@ -195,27 +213,31 @@ def provision():
     for choice in out.strip().split():
         print(choice)
         if choice.lower() in {"volumes", "volume", "v", "vol", "vols"}:
-            volumes.append(volume())
+            volumes.append(volume() if tp != "clean" else clean_volume())
         if choice.lower() in {"placement_policies", "placement_policy", "pp",
                               "placement", "pl", "placement-policies",
                               "placement-policy"}:
-            pp.append(placement_policy())
+            pp.append(placement_policy() if tp != "clean"
+                      else clean_placement_policy())
         if choice.lower() in {"media_policies", "media_policy", "mp",
                               "media", "md", "media-policies",
                               "media-policy"}:
-            mp.append(media_policy())
+            mp.append(media_policy() if tp != "clean"
+                      else clean_media_policy())
         if choice.lower() in QUIT:
             app_exit(0)
     return create_dbmp_command(volumes=volumes,
                                placement_policies=pp,
-                               media_policies=mp)
+                               media_policies=mp,
+                               clean=tp == "clean")
+
+
+def provision():
+    return type_chooser("provision")
 
 
 def clean():
-    pt.shortcuts.clear()
-    print("Please fill in everything you'd like to clean")
-    session.prompt()
-    create_dbmp_command(clean={})
+    return type_chooser("clean")
 
 
 def _dprompt(tp, color, prompt, prompt_re):
@@ -259,6 +281,18 @@ def media_policy():
     return _dprompt("MEDIA_POLICY", "blue", MPPROMPT, MPPROMPT_RE)
 
 
+def clean_volume():
+    return _dprompt("VOLUME", "red", CVPROMPT, CVPROMPT_RE)
+
+
+def clean_placement_policy():
+    return _dprompt("PLACEMENT_POLICY", "green", CPPPROMPT, CPPPROMPT_RE)
+
+
+def clean_media_policy():
+    return _dprompt("MEDIA_POLICY", "blue", CMPPROMPT, CMPPROMPT_RE)
+
+
 def create_dbmp_command(**kwargs):
     args = []
     for vol in kwargs.get("volumes", []):
@@ -280,6 +314,12 @@ def create_dbmp_command(**kwargs):
     for mp in kwargs.get("media_policies", []):
         arg = ",".join(["=".join((k, str(v))) for k, v in mp.items()])
         args.append("--media-policy='{}'".format(arg))
+    if kwargs.get('clean'):
+        args.append("--clean")
+    if kwargs.get('unmount'):
+        args.append("--unmount")
+    if kwargs.get('logout'):
+        args.append("--logout")
     return args
 
 
