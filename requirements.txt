@@ -3,5 +3,6 @@ paramiko
 requests
 six
 tabulate
+pygments
 prompt_toolkit>=2.0.0
 git+http://github.com/Datera/python-sdk
