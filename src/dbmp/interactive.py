@@ -166,7 +166,7 @@ def print_header(tp, color):
 
 def print_dict(d):
     for k, v in sorted(d.items()):
-        print('{0:<25} {1:<15} '.format(k, v))
+        print('{:<25} {:<15} '.format(k, str(v)))
 
 
 def interactive(python):
