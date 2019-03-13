@@ -154,7 +154,7 @@ def parse_vol_opt(s):
             raise EnvironmentError("Volume key: {} is not valid".format(k))
         if k == 'object':
             opts[k] = v in ("True", "true")
-        if 'max' in k:
+        elif 'max' in k:
             opts['qos'][k] = int(v)
         else:
             try:
