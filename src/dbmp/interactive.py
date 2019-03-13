@@ -5,7 +5,6 @@ import argparse
 import io
 import os
 import re
-import shlex
 import subprocess
 import sys
 
@@ -348,7 +347,9 @@ def dbmp_exe(python, args):
     if DRY_RUN:
         print("{} {}".format(python, "\n".join(args)))
         sys.exit(0)
-    print(subprocess.check_output([python, shlex.split(args)]))
+    cmd = [python]
+    cmd.extend(args)
+    print(subprocess.check_output(cmd))
 
 
 def main(args):
