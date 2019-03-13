@@ -106,6 +106,7 @@ CMPPROMPT_RE = _process_re(r"""name:\s*(?P<name>.+)""")
 #     else:
 #         app.editing_mode = VI
 
+REMOVES = {"None", "none", "", None}
 QUIT = {"q", "quit", "exit", ":q"}
 DRY_RUN = False
 
@@ -322,7 +323,8 @@ def create_dbmp_command(**kwargs):
             args.append('--login')
         if vol.pop('fio', ''):
             args.append('--fio')
-        arg = ",".join(["=".join((k, str(v))) for k, v in vol.items()])
+        arg = ",".join(["=".join((k, str(v))) for k, v in vol.items()
+                        if v not in REMOVES])
         args.append("--volume='{}'".format(arg))
     for pp in kwargs.get("placement_policies", []):
         mx = pp.get('max', [])
@@ -349,7 +351,10 @@ def dbmp_exe(python, args):
         sys.exit(0)
     cmd = [python]
     cmd.extend(args)
-    print(subprocess.check_output(cmd))
+    print(subprocess.check_output(" ".join(cmd), shell=True))
+    if pt.shortcuts.confirm("Would you like to restart?"):
+        return
+    sys.exit(0)
 
 
 def main(args):
