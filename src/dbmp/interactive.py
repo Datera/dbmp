@@ -187,7 +187,7 @@ def interactive(python):
             out = session.prompt(pt.HTML(
                 "choices: [(<green>p</green>)rovision, (<red>c</red>)lean]> "),
                 default="p", lexer=pt.lexers.PygmentsLexer(WelcomeLexer),
-                style=dbmp_style)
+                style=dbmp_style, multiline=False)
             out = out.strip().lower()
             print()
             if out in {"p", "provision"}:
@@ -222,7 +222,8 @@ def type_chooser(tp):
     print("same resource, enter it multiple times")
     print("Press ENTER when finished")
     out = session.prompt("> ", default="v ",
-                         lexer=pt.lexers.PygmentsLexer(TypeChooserLexer))
+                         lexer=pt.lexers.PygmentsLexer(TypeChooserLexer),
+                         multiline=False)
     volumes = []
     pp = []
     mp = []
