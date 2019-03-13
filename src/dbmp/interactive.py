@@ -187,7 +187,7 @@ def interactive(python):
             out = session.prompt(pt.HTML(
                 "choices: [(<green>p</green>)rovision, (<red>c</red>)lean]> "),
                 default="p", lexer=pt.lexers.PygmentsLexer(WelcomeLexer),
-                style=dbmp_style, multiline=False)
+                style=dbmp_style, multiline=False, key_bindings=bindings)
             out = out.strip().lower()
             print()
             if out in {"p", "provision"}:
@@ -223,7 +223,7 @@ def type_chooser(tp):
     print("Press ENTER when finished")
     out = session.prompt("> ", default="v ",
                          lexer=pt.lexers.PygmentsLexer(TypeChooserLexer),
-                         multiline=False)
+                         multiline=False, key_bindings=bindings)
     volumes = []
     pp = []
     mp = []
@@ -273,7 +273,8 @@ def _dprompt(tp, color, prompt, prompt_re):
                 print(pt.HTML("<red><b>Invalid data for {}</b></red>".format(
                     gi)))
                 dprompt = og_data
-                session.prompt("Press Enter To Retry", multiline=False)
+                session.prompt("Press Enter To Retry", multiline=False,
+                               key_bindings=bindings)
                 fail = True
                 break
             opts.update(match.groupdict())
