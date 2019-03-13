@@ -20,7 +20,15 @@ CONFIG = os.path.join(DIR, "datera-config.json")
 DBMP_TEMPLATE = """
 #!/bin/bash
 
-{python} {dbmp} $@
+if [[ $1 =~ .*interactive.* ]]
+then
+    # dbmp interactive needs to know which python
+    # virtualenv to use
+    out=$({python} {interactive} "{python} {dbmp}")
+    {python} {dbmp} ${{out}}
+else
+    {python} {dbmp} $@
+fi
 """
 
 VERBOSE = False

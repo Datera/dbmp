@@ -44,7 +44,8 @@ read_bandwidth_max: 0
 write_bandwidth_max: 0
 total_bandwidth_max: 0
 login: False
-mount: False"""
+mount: False
+fio: False"""
 
 VPROMPT_RE = list(map(re.compile, r"""prefix:\s*(?P<prefix>[\w\-]+)
 count:\s*(?P<count>\d+)
@@ -61,7 +62,8 @@ read_bandwidth_max:\s*(?P<read_bandwidth_max>\d+)
 write_bandwidth_max:\s*(?P<write_bandwidth_max>\d+)
 total_bandwidth_max:\s*(?P<total_bandwidth_max>\d+)
 login:\s*(?P<login>[Tt]rue|[Ff]alse)
-mount:\s*(?P<mount>[Tt]rue|[Ff]alse)""".splitlines()))
+mount:\s*(?P<mount>[Tt]rue|[Ff]alse)
+fio:\s*(?P<fio>[Tt]rue|[Ff]alse)""".splitlines()))
 
 PPPROMPT = r"""name: my-placement-policy
 max(';' separates): all-flash;hybrid
@@ -315,12 +317,12 @@ def clean_media_policy():
 def create_dbmp_command(**kwargs):
     args = []
     for vol in kwargs.get("volumes", []):
-        mount = vol.pop('mount', '')
-        if mount:
+        if vol.pop('mount', ''):
             args.append('--mount')
-        login = vol.pop('login', '')
-        if login:
+        if vol.pop('login', ''):
             args.append('--login')
+        if vol.pop('fio', ''):
+            args.append('--fio')
         arg = ",".join(["=".join((k, str(v))) for k, v in vol.items()])
         args.append("--volume='{}'".format(arg))
     for pp in kwargs.get("placement_policies", []):
