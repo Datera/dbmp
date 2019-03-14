@@ -57,31 +57,60 @@ def exe_python(cmd):
     return subprocess.check_output(cmd, shell=True)
 
 
+def install_packages():
+    # Install prereqs Ubuntu
+    try:
+        exe("sudo apt-get install python-virtualenv python-dev "
+            "libffi-dev libssl-dev gcc -y")
+    # Install prereqs Centos
+    except subprocess.CalledProcessError as e:
+        vprint(e)
+        print("Ubuntu packages failed, trying RHEL packages")
+        try:
+            exe("sudo yum install python-virtualenv python-devel "
+                "libffi-devel openssl-devel gcc -y")
+        except subprocess.CalledProcessError as e:
+            vprint(e)
+            print("RHEL packages failed, trying SUSE packages")
+            try:
+                exe("sudo zypper install -y python-setuptools libffi-devel "
+                    "python-curses gcc")
+                # For some reason this has to be a separate call
+                exe("sudo zypper install -y python-devel")
+                install_virtualenv_from_source()
+            except subprocess.CalledProcessError as e:
+                vprint(e)
+                print("SUSE packages failed")
+                print("Could not install prereqs")
+                return 1
+
+
+def install_virtualenv_from_source():
+    if not os.path.exists("pypa-virtualenv-3272f7b"):
+        exe("curl --location --output virtualenv-16.4.3.tar.gz "
+            "https://github.com/pypa/virtualenv/tarball/16.4.3")
+        exe("tar zxvf virtualenv-16.4.3.tar.gz")
+    exe("python pypa-virtualenv-3272f7b/virtualenv.py .ddct")
+
+
 def main(args):
     global VERBOSE
     VERBOSE = not args.quiet
     try:
         exe("which virtualenv")
     except subprocess.CalledProcessError:
-        # Install prereqs Ubuntu
-        try:
-            exe("sudo apt-get update")
-            exe("sudo apt-get install python-virtualenv python-dev "
-                "libffi-dev libssl-dev -y")
-        # Install prereqs Centos
-        except subprocess.CalledProcessError as e:
-            vprint(e)
-            print("Ubuntu packages failed, trying RHEL packages")
-            try:
-                exe("sudo yum install python-virtualenv python-devel "
-                    "libffi-devel openssl-devel -y")
-            except subprocess.CalledProcessError as e:
-                print(e)
-                print("RHEL packages failed")
-                print("Could not install prereqs")
-                return 1
+        if install_packages() == 1:
+            return 1
     if not os.path.isdir(VENV):
-        exe("virtualenv {}".format(VENV))
+        try:
+            exe("virtualenv {}".format(VENV))
+        except subprocess.CalledProcessError:
+            # Sometimes this fails because python-setuptools isn't installed
+            # this almost always happens on SUSE, but we'll install all
+            # necessary packages just to be safe.
+            if install_packages() == 1:
+                return 1
+            exe("virtualenv {}".format(VENV))
     exe_pip("install -U pip")
     exe_pip("install -U -r {}".format(REQUIREMENTS))
     exe_pip("install -e {}".format(DIR))
