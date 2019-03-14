@@ -13,7 +13,9 @@ import prompt_toolkit as pt
 from prompt_toolkit.key_binding.bindings.named_commands import get_by_name
 
 from dbmp.interactive_lexers import TypeChooserLexer, WelcomeLexer, dbmp_style
-from dbmp.interactive_lexers import EditLexer, VOLS, PP, MP
+from dbmp.interactive_lexers import EditLexer, VOLS, VOLS_D, PP, MP, COLORS
+from dbmp.interactive_lexers import TMPS, TMPS_D, MOUNTS, ALERTS
+from dbmp.interactive_lexers import EVENTS_U, EVENTS_S
 
 print = pt.print_formatted_text
 HISTORY = os.path.expanduser("~/.dbmp_history")
@@ -183,9 +185,11 @@ def interactive(python):
             print("Welcome to the DBMP Interactive Session")
             print(
                 pt.HTML("Would you like to <green>provison</green>, "
-                        "or <red>clean</red> up?"))
+                        "or <red>clean</red> up or <blue>list</blue>?"))
             out = session.prompt(pt.HTML(
-                "choices: [(<green>p</green>)rovision, (<red>c</red>)lean]> "),
+                "choices: [(<green>p</green>)rovision, "
+                "(<red>c</red>)lean, "
+                "(<blue>l</blue>)ist]> "),
                 default="p", lexer=pt.lexers.PygmentsLexer(WelcomeLexer),
                 style=dbmp_style, multiline=False, key_bindings=bindings)
             out = out.strip().lower()
@@ -194,29 +198,34 @@ def interactive(python):
                 args = provision()
             if out in {"c", "clean"}:
                 args = clean()
+            if out in {"l", "list"}:
+                args = dlist()
             if out in QUIT:
                 if args:
                     print(args)
                 app_exit(0)
+            if not pt.shortcuts.confirm("Are you using multipath?"):
+                args.append("--no-multipath")
             dbmp_exe(python, args)
     except KeyboardInterrupt:
         app_exit(1)
 
 
-def type_chooser(tp):
+def type_chooser(tp, types):
     pt.shortcuts.clear()
     print("Please type everything you'd like to {} "
           "(<space> separated)".format(tp))
+    longs = []
+    shorts = []
+    for i, t in enumerate(types):
+        long, short = t
+        longs.append(
+            "<{color}>{long}</{color}>".format(color=COLORS[i], long=long))
+        shorts.append(
+            "<{color}>{short}</{color}>".format(color=COLORS[i], short=short))
+    print(pt.HTML("Options are: [" + " ".join(longs) + "]"))
     print(pt.HTML(
-        "Options are: ["
-        "<red>volumes</red> "
-        "<green>placement_policies</green> "
-        "<blue>media_policies</blue>]"))
-    print(pt.HTML(
-        "You can use abbreviations like ["
-        "<red>v</red> "
-        "<green>pp</green> "
-        "<blue>mp</blue>]"))
+        "You can use abbreviations like [" + " ".join(shorts) + "]"))
     print("If you would like to {} multiple different types of the ".format(
         tp))
     print("same resource, enter it multiple times")
@@ -224,33 +233,111 @@ def type_chooser(tp):
     out = session.prompt("> ", default="v ",
                          lexer=pt.lexers.PygmentsLexer(TypeChooserLexer),
                          multiline=False, key_bindings=bindings)
+    kwargs = {}
+    if tp == "provision":
+        kwargs = handle_provision_choice(out)
+    elif tp == "clean":
+        kwargs = handle_clean_choice(out)
+    elif tp == "list":
+        kwargs = handle_list_choice(out)
+    else:
+        print(pt.HTML("Unrecognized choice: [<b>{}</b>]".format(tp)))
+    return create_dbmp_command(**kwargs)
+
+
+def handle_provision_choice(out):
     volumes = []
     pp = []
     mp = []
     for choice in out.strip().split():
-        print(choice)
         if choice.lower() in VOLS:
-            volumes.append(volume() if tp != "clean" else clean_volume())
-        if choice.lower() in PP:
-            pp.append(placement_policy() if tp != "clean"
-                      else clean_placement_policy())
-        if choice.lower() in MP:
-            mp.append(media_policy() if tp != "clean"
-                      else clean_media_policy())
-        if choice.lower() in QUIT:
+            volumes.append(volume())
+        elif choice.lower() in PP:
+            pp.append(placement_policy())
+        elif choice.lower() in MP:
+            mp.append(media_policy())
+        elif choice.lower() in QUIT:
             app_exit(0)
-    return create_dbmp_command(volumes=volumes,
-                               placement_policies=pp,
-                               media_policies=mp,
-                               clean=tp == "clean")
+        else:
+            print(pt.HTML("Unrecognized choice: [<b>{}</b>]".format(choice)))
+    return dict(volumes=volumes, placement_policies=pp, media_policies=mp)
+
+
+def handle_clean_choice(out):
+    volumes = []
+    pp = []
+    mp = []
+    for choice in out.strip().split():
+        if choice.lower() in VOLS:
+            volumes.append(clean_volume())
+        elif choice.lower() in PP:
+            pp.append(clean_placement_policy())
+        elif choice.lower() in MP:
+            mp.append(clean_media_policy())
+        elif choice.lower() in QUIT:
+            app_exit(0)
+        else:
+            print(pt.HTML("Unrecognized choice: [<b>{}</b>]".format(choice)))
+    return dict(volumes=volumes, placement_policies=pp, media_policies=mp,
+                clean=True)
+
+
+def handle_list_choice(out):
+    args = []
+    for choice in out.strip().split():
+        choice_lower = choice.lower()
+        if choice_lower in VOLS:
+            args.append("volumes")
+        elif choice_lower in VOLS_D:
+            args.append("volumes-detail")
+        elif choice_lower in TMPS:
+            args.append("templates")
+        elif choice_lower in TMPS_D:
+            args.append("templates-detail")
+        elif choice_lower in MOUNTS:
+            args.append("mounts")
+        elif choice_lower in ALERTS:
+            args.append("alerts")
+        elif choice_lower in EVENTS_U:
+            args.append("events-user")
+        elif choice_lower in EVENTS_S:
+            args.append("events-system")
+        # elif choice_lower in EVENTS_ID:
+        #     args.append("events-id")
+        elif choice_lower in PP:
+            args.append("placement-policy")
+        elif choice_lower in MP:
+            args.append("media-policy")
+        elif choice_lower in QUIT:
+            app_exit(0)
+        else:
+            print(pt.HTML("Unrecognized choice: [<b>{}</b>]".format(choice)))
+    return dict(list=args)
 
 
 def provision():
-    return type_chooser("provision")
+    return type_chooser("provision", [("volumes", "v"),
+                                      ("placement_policies", "pp"),
+                                      ("media_policies", "mp")])
 
 
 def clean():
-    return type_chooser("clean")
+    return type_chooser("clean", [("volumes", "v"),
+                                  ("placement_policies", "pp"),
+                                  ("media_policies", "mp")])
+
+
+def dlist():
+    return type_chooser("list", [("volumes", "v"),
+                                 ("volumes_detail", "vd"),
+                                 ("templates", "t"),
+                                 ("templates_detail", "td"),
+                                 ("mounts", "m"),
+                                 ("alerts", "a"),
+                                 ("events_user", "eu"),
+                                 ("events_system", "es"),
+                                 ("placement_policies", "pp"),
+                                 ("media_policies", "mp")])
 
 
 def _dprompt(tp, color, prompt, prompt_re):
@@ -344,6 +431,8 @@ def create_dbmp_command(**kwargs):
         args.append("--unmount")
     if kwargs.get('logout'):
         args.append("--logout")
+    for larg in kwargs.get('list', []):
+        args.append("--list={}".format(larg))
     return args
 
 
@@ -351,9 +440,9 @@ def dbmp_exe(python, args):
     if DRY_RUN:
         print("{} {}".format(python, "\n".join(args)))
         sys.exit(0)
-    cmd = [python]
+    cmd = ["env", "DBMP_INTERACTIVE=true", python]
     cmd.extend(args)
-    print(subprocess.check_output(" ".join(cmd), shell=True))
+    print(subprocess.check_output(" ".join(cmd), shell=True).decode('utf-8'))
     if pt.shortcuts.confirm("Would you like to restart?"):
         return
     sys.exit(0)

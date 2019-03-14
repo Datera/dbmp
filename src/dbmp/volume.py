@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, division
 
+import codecs
 import copy
 import io
 import json
@@ -8,6 +9,7 @@ import os
 import random
 import socket
 import string
+import sys
 import threading
 
 import six
@@ -15,6 +17,10 @@ import six
 from dfs_sdk import exceptions as dat_exceptions
 
 from dbmp.utils import Parallel, get_hostname, dprint
+
+# We only want to set stdout to utf-8 encoding when running interactive mode
+if os.environ.get("DBMP_INTERACTIVE"):
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
 FLOCK = threading.Lock()
 

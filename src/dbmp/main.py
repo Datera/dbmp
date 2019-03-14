@@ -93,40 +93,46 @@ def main(args):
         else:
             print("Recieved positive confirmation.  Continuing")
 
-    if 'volumes' in args.list:
-        for vol in args.volume:
-            list_volumes('local', api, vol, detail='detail' in args.list)
-        if not args.volume:
-            list_volumes('local', api, 'prefix=all', detail='detail' in
-                         args.list)
-        return SUCCESS
-    elif 'templates' in args.list:
-        list_templates(api, detail='detail' in args.list)
-    elif 'mounts' in args.list:
-        for vol in args.volume:
-            list_mounts('local', api, vol, 'detail' in args.list,
-                        not args.no_multipath)
-        else:
-            list_mounts('local', api, 'prefix=all', 'detail'
-                        in args.list, not args.no_multipath)
-    elif 'alerts' in args.list:
-        list_alerts(api)
-        return SUCCESS
-    if 'events' in args.list:
-        if 'system' in args.list:
-            user = 'system'
-        if 'user' in args.list:
-            user = 'user'
-        if 'id' in args.list:
-            user = args.id
-        list_events(api, user)
-        return SUCCESS
-    if 'media-policy' in args.list:
-        list_media_policies(api)
-        return SUCCESS
-    if 'placement-policy' in args.list:
-        list_placement_policies(api)
-        return SUCCESS
+    for arg in args.list:
+        detail = 'detail' in arg
+        if 'volumes' in arg:
+            print("###### VOLUMES {}######".format(
+                "DETAIL " if detail else ''))
+            for vol in args.volume:
+                list_volumes('local', api, vol, detail=detail)
+            if not args.volume:
+                list_volumes('local', api, 'prefix=all', detail)
+        elif 'templates' in arg:
+            print("###### TEMPLATES {}######".format(
+                "DETAIL " if detail else ''))
+            list_templates(api, detail=detail)
+        elif 'mounts' in arg:
+            print("###### MOUNTS ######".format(
+                "DETAIL " if detail else ''))
+            for vol in args.volume:
+                list_mounts('local', api, vol, detail,
+                            not args.no_multipath)
+            else:
+                list_mounts('local', api, 'prefix=all', detail,
+                            not args.no_multipath)
+        elif 'alerts' in arg:
+            print("###### ALERTS ######")
+            list_alerts(api)
+        if 'events' in arg:
+            print("###### EVENTS ######")
+            if 'system' in arg:
+                user = 'system'
+            if 'user' in arg:
+                user = 'user'
+            if 'id' in arg:
+                user = args.id
+            list_events(api, user)
+        if 'media-policy' in arg:
+            print("###### MEDIA POLICIES ######")
+            list_media_policies(api)
+        if 'placement-policy' in arg:
+            print("###### PLACEMENT POLICIES ######")
+            list_placement_policies(api)
 
     if args.clear_alerts:
         clear_alerts(api)
@@ -225,7 +231,7 @@ if __name__ == '__main__':
                                            'events-system', 'events-user',
                                            'events-id', 'placement-policy',
                                            'media-policy'),
-                        default='',
+                        action='append', default=[],
                         help='List accessible Datera Resources')
     parser.add_argument('--clear-alerts', action='store_true')
     parser.add_argument('--volume', action='append', default=[],
