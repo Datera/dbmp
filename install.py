@@ -77,7 +77,6 @@ def install_packages():
                     "python-curses gcc")
                 # For some reason this has to be a separate call
                 exe("sudo zypper install -y python-devel")
-                install_virtualenv_from_source()
             except subprocess.CalledProcessError as e:
                 vprint(e)
                 print("SUSE packages failed")
@@ -90,7 +89,7 @@ def install_virtualenv_from_source():
         exe("curl --location --output virtualenv-16.4.3.tar.gz "
             "https://github.com/pypa/virtualenv/tarball/16.4.3")
         exe("tar zxvf virtualenv-16.4.3.tar.gz")
-    exe("python pypa-virtualenv-3272f7b/virtualenv.py .ddct")
+    exe("python pypa-virtualenv-3272f7b/virtualenv.py .dbmp")
 
 
 def main(args):
@@ -110,7 +109,7 @@ def main(args):
             # necessary packages just to be safe.
             if install_packages() == 1:
                 return 1
-            exe("virtualenv {}".format(VENV))
+            install_virtualenv_from_source()
     exe_pip("install -U pip")
     exe_pip("install -U -r {}".format(REQUIREMENTS))
     exe_pip("install -e {}".format(DIR))
