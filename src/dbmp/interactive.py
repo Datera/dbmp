@@ -98,16 +98,6 @@ CMPPROMPT = r"""name: my-media-policy"""
 
 CMPPROMPT_RE = _process_re(r"""name:\s*(?P<name>.+)""")
 
-# @bindings.add('c-k')
-# def _(event):
-#     " Toggle between Emacs and Vi mode. "
-#     app = event.app
-
-#     if app.editing_mode == VI:
-#         app.editing_mode = EMACS
-#     else:
-#         app.editing_mode = VI
-
 REMOVES = {"None", "none", "", None}
 QUIT = {"q", "quit", "exit", ":q"}
 DRY_RUN = False
@@ -144,19 +134,6 @@ def _(event):
     "Accept input during multiline mode"
     get_by_name("accept-line")(event)
 
-
-# @bindings.add('q q')
-# def _(event):
-#     "Quit app at any time"
-#     app_exit(0)
-
-
-# def bottom_toolbar():
-#     " Display the current input mode. "
-#     text = 'Vi' if get_app().editing_mode == VI else 'Emacs'
-#     return [
-#         ('class:toolbar', ' [s-down] %s ' % text)
-#     ]
 
 def print_header(tp, color):
     print(pt.HTML(

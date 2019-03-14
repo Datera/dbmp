@@ -25,7 +25,8 @@ if [[ $1 =~ .*interactive.* ]]
 then
     # dbmp interactive needs to know which python
     # virtualenv to use
-    {python} {interactive} "{python} {dbmp}"
+    shift
+    {python} {interactive} "{python} {dbmp}" $@
 else
     {python} {dbmp} $@
 fi

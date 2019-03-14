@@ -365,3 +365,21 @@ the ``--run-host`` flag will default all operations to local.
 
 * File an issue on the github page
 * Contact us at support@datera.io
+
+## What Interactive?
+
+NOTE: This is a WIP
+
+```bash
+$ ./dbmp --interactive
+```
+In every screen you can press SHIFT-down to submit the prompt contents.
+Multiline prompts do not accept ENTER as a submission key because it instead
+inserts a newline.
+
+Interactive mode builds a dbmp command to run with vanilla dbmp.  If you would
+like to see the command it constructs, add the `--dry-run` argument.
+
+```bash
+$ ./dbmp --interactive --dry-run
+```

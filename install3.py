@@ -15,6 +15,7 @@ PYTHON = os.path.join(VENV, "bin", "python")
 PIP = os.path.join(VENV, "bin", "pip")
 REQUIREMENTS = os.path.join(DIR, "requirements.txt")
 DBMP = os.path.join(DIR, "dbmp")
+INTERACTIVEPY = os.path.join(DIR, "src", "dbmp", "interactive.py")
 DBMPPY = os.path.join(DIR, "src", "dbmp", "main.py")
 CONFIG = os.path.join(DIR, "datera-config.json")
 DBMP_TEMPLATE = """
@@ -24,7 +25,8 @@ if [[ $1 =~ .*interactive.* ]]
 then
     # dbmp interactive needs to know which python
     # virtualenv to use
-    {python} {interactive} "{python} {dbmp}"
+    shift
+    {python} {interactive} "{python} {dbmp}" $@
 else
     {python} {dbmp} $@
 fi
@@ -89,7 +91,8 @@ def main(args):
         with io.open(DBMP, 'w+') as f:
             f.write(DBMP_TEMPLATE.format(
                 python=PYTHON,
-                dbmp=DBMPPY))
+                dbmp=DBMPPY,
+                interactive=INTERACTIVEPY))
         # Ensure it is executable
         st = os.stat(DBMP)
         os.chmod(DBMP, st.st_mode | stat.S_IEXEC)
@@ -102,7 +105,10 @@ def main(args):
               "used, remove the generated config file".format(
                   DBMP, CONFIG))
     else:
-        print("DBMP is now installed.  Use '{}' to run DBMP.".format(DBMP))
+        print("DBMP is now installed.  Use '{dbmp}' to run DBMP."
+              "If you would like to run DBMP in 'interactive' mode, use"
+              "'{dbmp} --interactive' with no other arguments".format(
+                  dbmp=DBMP))
     return 0
 
 
