@@ -11,11 +11,16 @@ import sys
 import prompt_toolkit as pt
 # from prompt_toolkit.application.current import get_app
 from prompt_toolkit.key_binding.bindings.named_commands import get_by_name
+from prompt_toolkit.key_binding.bindings.completion import generate_completions
 
 from dbmp.interactive_lexers import TypeChooserLexer, WelcomeLexer, dbmp_style
 from dbmp.interactive_lexers import EditLexer, VOLS, VOLS_D, PP, MP, COLORS
 from dbmp.interactive_lexers import TMPS, TMPS_D, MOUNTS, ALERTS
 from dbmp.interactive_lexers import EVENTS_U, EVENTS_S
+from dbmp.interactive_lexers import dbmp_interactive_completer
+from dbmp.interactive_lexers import dbmp_provision_completer
+from dbmp.interactive_lexers import dbmp_chooser_completer
+from dbmp.interactive_lexers import dbmp_list_completer
 
 print = pt.print_formatted_text
 HISTORY = os.path.expanduser("~/.dbmp_history")
@@ -135,6 +140,11 @@ def _(event):
     get_by_name("accept-line")(event)
 
 
+@bindings.add('tab')
+def _(event):
+    generate_completions(event)
+
+
 def print_header(tp, color):
     print(pt.HTML(
         "<u><b>Please fill out the following <{}>{}</{}> attributes"
@@ -168,7 +178,8 @@ def interactive(python):
                 "(<red>c</red>)lean, "
                 "(<blue>l</blue>)ist]> "),
                 default="p", lexer=pt.lexers.PygmentsLexer(WelcomeLexer),
-                style=dbmp_style, multiline=False, key_bindings=bindings)
+                style=dbmp_style, multiline=False, key_bindings=bindings,
+                completer=dbmp_interactive_completer)
             out = out.strip().lower()
             print()
             if out in {"p", "provision"}:
@@ -188,7 +199,7 @@ def interactive(python):
         app_exit(1)
 
 
-def type_chooser(tp, types):
+def type_chooser(tp, types, completer):
     pt.shortcuts.clear()
     print("Please type everything you'd like to {} "
           "(<space> separated)".format(tp))
@@ -209,7 +220,8 @@ def type_chooser(tp, types):
     print("Press ENTER when finished")
     out = session.prompt("> ", default="v ",
                          lexer=pt.lexers.PygmentsLexer(TypeChooserLexer),
-                         multiline=False, key_bindings=bindings)
+                         multiline=False, key_bindings=bindings,
+                         completer=completer)
     kwargs = {}
     if tp == "provision":
         kwargs = handle_provision_choice(out)
@@ -293,28 +305,34 @@ def handle_list_choice(out):
 
 
 def provision():
-    return type_chooser("provision", [("volumes", "v"),
-                                      ("placement_policies", "pp"),
-                                      ("media_policies", "mp")])
+    return type_chooser("provision",
+                        [("volumes", "v"),
+                         ("placement_policies", "pp"),
+                         ("media_policies", "mp")],
+                        dbmp_chooser_completer)
 
 
 def clean():
-    return type_chooser("clean", [("volumes", "v"),
-                                  ("placement_policies", "pp"),
-                                  ("media_policies", "mp")])
+    return type_chooser("clean",
+                        [("volumes", "v"),
+                         ("placement_policies", "pp"),
+                         ("media_policies", "mp")],
+                        dbmp_chooser_completer)
 
 
 def dlist():
-    return type_chooser("list", [("volumes", "v"),
-                                 ("volumes_detail", "vd"),
-                                 ("templates", "t"),
-                                 ("templates_detail", "td"),
-                                 ("mounts", "m"),
-                                 ("alerts", "a"),
-                                 ("events_user", "eu"),
-                                 ("events_system", "es"),
-                                 ("placement_policies", "pp"),
-                                 ("media_policies", "mp")])
+    return type_chooser("list",
+                        [("volumes", "v"),
+                         ("volumes_detail", "vd"),
+                         ("templates", "t"),
+                         ("templates_detail", "td"),
+                         ("mounts", "m"),
+                         ("alerts", "a"),
+                         ("events_user", "eu"),
+                         ("events_system", "es"),
+                         ("placement_policies", "pp"),
+                         ("media_policies", "mp")],
+                        dbmp_list_completer)
 
 
 def _dprompt(tp, color, prompt, prompt_re):
@@ -326,7 +344,8 @@ def _dprompt(tp, color, prompt, prompt_re):
                                  default=dprompt,
                                  multiline=True,
                                  key_bindings=bindings,
-                                 lexer=pt.lexers.PygmentsLexer(EditLexer))
+                                 lexer=pt.lexers.PygmentsLexer(EditLexer),
+                                 completer=dbmp_provision_completer)
         data = "\n".join(list(filter(bool, og_data.splitlines()))).strip()
         opts = {}
         fail = False
@@ -337,6 +356,7 @@ def _dprompt(tp, color, prompt, prompt_re):
                 print(pt.HTML("<red><b>Invalid data for {}</b></red>".format(
                     gi)))
                 dprompt = og_data
+
                 session.prompt("Press Enter To Retry", multiline=False,
                                key_bindings=bindings)
                 fail = True

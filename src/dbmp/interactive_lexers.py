@@ -3,9 +3,16 @@ from __future__ import print_function, division
 # Can't import unicode_literals because it breaks pygments for some reason
 import re
 
+from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.styles import Style, merge_styles
 from pygments.lexer import RegexLexer, words
 from pygments.token import Text, Name
+
+# Py 2/3 compat
+try:
+    str = unicode
+except NameError:
+    pass
 
 VOLS = {"volumes", "volume", "v", "vol", "vols"}
 VOLS_D = {"volumes-detail", "volume-detail", "vd", "vol-d", "vols-d",
@@ -46,6 +53,21 @@ dbmp_style = merge_styles([
     })
 ])
 
+dbmp_interactive_completer = WordCompleter(
+    filter(lambda x: len(x) >= 2, sorted(map(
+        str, ["p", "c", "l", "provision", "clean", "list"]))), WORD=True)
+dbmp_chooser_completer = WordCompleter(
+    filter(lambda x: len(x) >= 6 and "-" not in x,
+           sorted(map(str, VOLS | PP | MP))), WORD=True)
+dbmp_provision_completer = WordCompleter(
+   sorted(map(str, [
+       "True", "False", "None", "hybrid", "all_flash", "single_flash"])),
+   WORD=True)
+dbmp_list_completer = WordCompleter(
+    filter(lambda x: len(x) >= 6 and "-" not in x, sorted(map(
+        str, VOLS | VOLS_D | TMPS | TMPS_D | MOUNTS | ALERTS | EVENTS_U
+        | EVENTS_S | PP | MP))), WORD=True)
+
 
 class WelcomeLexer(RegexLexer):
     flags = re.MULTILINE | re.UNICODE
@@ -54,9 +76,10 @@ class WelcomeLexer(RegexLexer):
             (r'\n', Text),
             (r'\s+', Text),
             (r'\\\n', Text),  # line continuations
-            (words(('p',), prefix=r'\b', suffix=r'\b'), Name.Attribute),
-            (words(('c',), prefix=r'\b', suffix=r'\b'), Name.Builtin),
-            (words(('l',), prefix=r'\b', suffix=r'\b'), Name.Class),
+            (words(('p', 'provision'), prefix=r'\b', suffix=r'\b'),
+                Name.Attribute),
+            (words(('c', 'clean'), prefix=r'\b', suffix=r'\b'), Name.Builtin),
+            (words(('l', 'list'), prefix=r'\b', suffix=r'\b'), Name.Class),
         ]
     }
 
@@ -69,8 +92,10 @@ class TypeChooserLexer(RegexLexer):
             (r'\s+', Text),
             (r'\\\n', Text),  # line continuations
             (words(tuple(VOLS), prefix=r'\b', suffix=r'\b'), Name.Attribute),
-            (words(tuple(VOLS_D), prefix=r'\b', suffix=r'\b'), Name.Builtin),
-            (words(tuple(TMPS), prefix=r'\b', suffix=r'\b'), Name.Class),
+            (words(tuple(PP), prefix=r'\b', suffix=r'\b'), Name.Builtin),
+            (words(tuple(MP), prefix=r'\b', suffix=r'\b'), Name.Class),
+            (words(tuple(VOLS_D), prefix=r'\b', suffix=r'\b'), Name.Property),
+            (words(tuple(TMPS), prefix=r'\b', suffix=r'\b'), Name.Label),
             (words(tuple(TMPS_D), prefix=r'\b', suffix=r'\b'), Name.Constant),
             (words(tuple(MOUNTS), prefix=r'\b', suffix=r'\b'), Name.Decorator),
             (words(tuple(ALERTS), prefix=r'\b', suffix=r'\b'), Name.Entity),
@@ -78,8 +103,6 @@ class TypeChooserLexer(RegexLexer):
                 Name.Exception),
             (words(tuple(EVENTS_S), prefix=r'\b', suffix=r'\b'),
                 Name.Function),
-            (words(tuple(PP), prefix=r'\b', suffix=r'\b'), Name.Property),
-            (words(tuple(MP), prefix=r'\b', suffix=r'\b'), Name.Label),
         ]
     }
 
@@ -92,5 +115,8 @@ class EditLexer(RegexLexer):
             (r'\s+', Text),
             (r'\\\n', Text),  # line continuations
             (r'.+: ', Name.Attribute),
+            (r'\d+', Name.Exception),
+            (r'(True|False)', Name.Namespace),
+            (r'None', Name.Label),
         ]
     }
