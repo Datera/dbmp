@@ -21,6 +21,7 @@ from dbmp.volume import list_templates, get_keys, del_keys
 from dbmp.placement_policy import create_media_policy, create_placement_policy
 from dbmp.placement_policy import list_placement_policies, list_media_policies
 from dbmp.placement_policy import delete_placement_policy, delete_media_policy
+from dbmp.csi_yaml import udc_envs_from_csi_yaml
 
 SUCCESS = 0
 FAILURE = 1
@@ -73,6 +74,8 @@ def run_health(api):
 
 
 def main(args):
+    if args.csi_yaml:
+        udc_envs_from_csi_yaml(args.csi_yaml)
     api = scaffold.get_api()
     print('Using Config:')
     scaffold.print_config()
@@ -319,6 +322,10 @@ if __name__ == '__main__':
                         ' print metrics to STDOUT')
     parser.add_argument('--get-keys', action='store_true',
                         help='Get the object keys for the specified volumes')
+    parser.add_argument('--csi-yaml',
+                        help='Get UDC config from CSI yaml file.  This makes'
+                             ' an assumption that you are running on a k8s'
+                             ' master node')
     parser.add_argument('id', nargs='?')
     args = parser.parse_args()
     sys.exit(main(args))
