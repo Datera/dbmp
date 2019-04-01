@@ -50,7 +50,6 @@ Functionality can be broken down into a few categories
 * Mount/Unmount
 * Load Generation
 * Metrics
-* Topology
 
 ### Creation
 
@@ -334,32 +333,6 @@ The following operations are currently supported (on a per-metric basis)
 The output format will change depending on the operation and the original data
 is NOT preserved.
 
-
-### Topology
-
-So far all examples have been run on a local host.  You can specify a non-local
-host by creating a dbmp-topology.json file in the current directory.  Each
-entry has the following format: ``user@ip:keyfile`` or ``user@ip:password``
-
-```json
-{
-    "my-host-1": "root@1.1.1.1:my-keyfile",
-    "my-host-2": "root@2.2.2.2:my-password"
-}
-```
-DBMP will check to see if a keyfile with a name matching the field after the
-colon exists, otherwise it will try to use that field as a password.
-
-You can specify a non-local operation by usinge the ``--run-host`` flag
-
-Example:
-
-```bash
-$ ./dbmp --volume my-complex-vol.json --mount --run-host my-host-1
-```
-
-This will mount the example volumes on "my-host-1" instead of local.  Omitting
-the ``--run-host`` flag will default all operations to local.
 
 ## What Problem?
 
