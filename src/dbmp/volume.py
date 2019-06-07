@@ -196,7 +196,7 @@ def ais_from_vols(api, vols):
     return ais
 
 
-def _print_vol_tree(ai, detail, snodes):
+def _print_vol_tree(ai, detail, snodes, metadata):
     if detail:
         print(ai.name, ai.admin_state)
     else:
@@ -228,6 +228,14 @@ def _print_vol_tree(ai, detail, snodes):
                 print('    {}    ∟ {} {}GB {}-replica {} {}'.format(
                     add, vol.name, vol.size, vol.replica_count, pp,
                     json.dumps(list(vasns))))
+                if metadata[ai.name]:
+                    gap = '             '
+                    print('{}|'.format(gap))
+                    print('{}∟ metadata'.format(gap))
+                    print('{}  --------'.format(gap))
+                    md = ["{}  {}: {}".format(gap, k, v)
+                          for k, v in metadata[ai.name].items()]
+                    print("\n".join(md))
 
 
 def _print_tmpl_tree(tmpl, detail):
@@ -255,14 +263,21 @@ def list_volumes(host, api, vopt, detail):
     opts = parse_vol_opt(vopt)
     hostname = get_hostname(host)
     snodes = {}
+    metadata = {}
     if detail:
         snodes = {sn.uuid: sn.name for sn in api.storage_nodes.list()}
+        try:
+            mds = api.app_instance_int_ecosystem_data.get()
+            metadata = {md.name: md.data for md in mds}
+        except dat_exceptions.DateraAPIException:
+            pass
     for ai in sorted(api.app_instances.list(), key=lambda x: x.name):
         if (opts.get('prefix') == 'all' or
                 opts.get('name') == ai.name or
                 ai.name.startswith(opts.get('prefix', hostname))):
             print('-------')
-            _print_vol_tree(ai, detail, snodes)
+            if detail:
+                _print_vol_tree(ai, detail, snodes, metadata)
     print('-------')
 
 
