@@ -6,4 +6,4 @@ tabulate
 pygments
 prompt_toolkit>=2.0.0
 ruamel.yaml
-git+http://github.com/Datera/python-sdk
+dfs_sdk>=1.2.23

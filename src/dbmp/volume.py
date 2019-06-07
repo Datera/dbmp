@@ -215,7 +215,7 @@ def _print_vol_tree(ai, detail, snodes):
             print('    ∟ {} {} {} {}'.format(
                 si.name, si.access.get('iqn'),
                 json.dumps(si.access.get('ips', [])),
-                json.dumps(asns)))
+                json.dumps(list(asns))))
             for vol in si.volumes.list():
                 vasns = map(lambda x: x['path'].split('/')[-1],
                             vol.active_storage_nodes)
@@ -227,7 +227,7 @@ def _print_vol_tree(ai, detail, snodes):
                     pp = vol['placement_mode']
                 print('    {}    ∟ {} {}GB {}-replica {} {}'.format(
                     add, vol.name, vol.size, vol.replica_count, pp,
-                    json.dumps(vasns)))
+                    json.dumps(list(vasns))))
 
 
 def _print_tmpl_tree(tmpl, detail):
