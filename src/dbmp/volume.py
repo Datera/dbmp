@@ -228,7 +228,7 @@ def _print_vol_tree(ai, detail, snodes, metadata):
                 print('    {}    ∟ {} {}GB {}-replica {} {}'.format(
                     add, vol.name, vol.size, vol.replica_count, pp,
                     json.dumps(list(vasns))))
-                if metadata[ai.name]:
+                if metadata.get(ai.name):
                     gap = '             '
                     print('{}|'.format(gap))
                     print('{}∟ metadata'.format(gap))
