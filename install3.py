@@ -60,14 +60,14 @@ def exe_python(cmd):
 def install_packages():
     # Install prereqs Ubuntu
     try:
-        exe("sudo apt-get install python-virtualenv python-dev "
+        exe("sudo apt-get install python3-venv python3-dev "
             "libffi-dev libssl-dev gcc -y")
     # Install prereqs Centos
     except subprocess.CalledProcessError as e:
         vprint(e)
         print("Ubuntu packages failed, trying RHEL packages")
         try:
-            exe("sudo yum install python-virtualenv python-devel "
+            exe("sudo yum install python3-venv python3-devel "
                 "libffi-devel openssl-devel gcc -y")
         except subprocess.CalledProcessError as e:
             vprint(e)
@@ -96,20 +96,20 @@ def main(args):
     global VERBOSE
     VERBOSE = not args.quiet
     try:
-        exe("which virtualenv")
+        exe("python3 -c 'import ensurepip'")
     except subprocess.CalledProcessError:
         if install_packages() == 1:
             return 1
     if not os.path.isdir(VENV):
-        try:
-            exe("virtualenv {}".format(VENV))
-        except subprocess.CalledProcessError:
-            # Sometimes this fails because python-setuptools isn't installed
-            # this almost always happens on SUSE, but we'll install all
-            # necessary packages just to be safe.
-            if install_packages() == 1:
-                return 1
-            install_virtualenv_from_source()
+        # try:
+        exe("python3 -m venv {}".format(VENV))
+        # except subprocess.CalledProcessError:
+        #     # Sometimes this fails because python-setuptools isn't installed
+        #     # this almost always happens on SUSE, but we'll install all
+        #     # necessary packages just to be safe.
+        #     if install_packages() == 1:
+        #         return 1
+        #     install_virtualenv_from_source()
     exe_pip("install -U pip")
     exe_pip("install -U -r {}".format(REQUIREMENTS))
     exe_pip("install -e {}".format(DIR))
