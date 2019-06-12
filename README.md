@@ -43,6 +43,7 @@ Functionality can be broken down into a few categories
 
 * Health Check
 * List Resources
+* Show Resources From URL
 * Simple Creation
 * Complex Creation
 * Deletion
@@ -50,6 +51,28 @@ Functionality can be broken down into a few categories
 * Mount/Unmount
 * Load Generation
 * Metrics
+
+### Resource Inspection
+
+DBMP can list resources of certain types or show a resource at a specific
+URL path.
+
+Example:
+```bash
+./dbmp --list volumes-detail
+```
+
+Or
+
+```bash
+./dbmp --show-at-url /app_instances/my-app-instance
+```
+
+When using ``--show-at-url`` if the url is not a resource, but a container like
+``/app_instances`` then all the resources at that path are listed
+
+NOTE: Alerts and Events can ONLY be accessed via a ``--list`` operation
+such as ``--list events-system``.
 
 ### Creation
 
