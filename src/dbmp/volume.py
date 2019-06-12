@@ -269,15 +269,14 @@ def list_volumes(host, api, vopt, detail):
         try:
             mds = api.app_instance_int_ecosystem_data.get()
             metadata = {md.name: md.data for md in mds}
-        except dat_exceptions.DateraAPIException:
+        except dat_exceptions.ApiError:
             pass
     for ai in sorted(api.app_instances.list(), key=lambda x: x.name):
         if (opts.get('prefix') == 'all' or
                 opts.get('name') == ai.name or
                 ai.name.startswith(opts.get('prefix', hostname))):
             print('-------')
-            if detail:
-                _print_vol_tree(ai, detail, snodes, metadata)
+            _print_vol_tree(ai, detail, snodes, metadata)
     print('-------')
 
 

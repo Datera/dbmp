@@ -22,6 +22,7 @@ from dbmp.placement_policy import create_media_policy, create_placement_policy
 from dbmp.placement_policy import list_placement_policies, list_media_policies
 from dbmp.placement_policy import delete_placement_policy, delete_media_policy
 from dbmp.csi_yaml import udc_envs_from_csi_yaml
+from dbmp import show
 
 SUCCESS = 0
 FAILURE = 1
@@ -95,6 +96,10 @@ def main(args):
             return FAILURE
         else:
             print("Recieved positive confirmation.  Continuing")
+
+    if args.show_at_url:
+        show.at_url(api, args.show_at_url)
+        return SUCCESS
 
     for arg in args.list:
         detail = 'detail' in arg
@@ -228,6 +233,8 @@ if __name__ == '__main__':
         parents=[tparser], formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--health', action='store_true',
                         help='Run a quick health check')
+    parser.add_argument('--show-at-url',
+                        help='Show resource located at url')
     parser.add_argument('--list', choices=('volumes', 'volumes-detail',
                                            'templates', 'templates-detail',
                                            'mounts', 'mounts-detail', 'alerts',
