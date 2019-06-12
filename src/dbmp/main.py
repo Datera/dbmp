@@ -234,7 +234,8 @@ if __name__ == '__main__':
     parser.add_argument('--health', action='store_true',
                         help='Run a quick health check')
     parser.add_argument('--show-at-url',
-                        help='Show resource located at url')
+                        help='Show resource located at url.  Not for use'
+                             'with events and alerts.  Use --list for those')
     parser.add_argument('--list', choices=('volumes', 'volumes-detail',
                                            'templates', 'templates-detail',
                                            'mounts', 'mounts-detail', 'alerts',
