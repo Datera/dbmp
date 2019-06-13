@@ -232,8 +232,12 @@ if __name__ == '__main__':
     tparser = scaffold.get_argparser(add_help=False)
     parser = argparse.ArgumentParser(
         parents=[tparser], formatter_class=argparse.RawTextHelpFormatter)
+
+    # Health Check
     parser.add_argument('--health', action='store_true',
                         help='Run a quick health check')
+
+    # System Inspection
     parser.add_argument('--show-at-url', action='append', default=[],
                         help='Show resource located at url.  Not for use'
                              'with events and alerts.  Use --list for those')
@@ -246,6 +250,11 @@ if __name__ == '__main__':
                         action='append', default=[],
                         help='List accessible Datera Resources')
     parser.add_argument('--clear-alerts', action='store_true')
+
+    # This is only used with --list events-id
+    parser.add_argument('id', nargs='?')
+
+    # Resource Creation
     parser.add_argument('--volume', action='append', default=[],
                         help='Supports the following comma separated params:\n'
                              ' \n'
@@ -275,24 +284,16 @@ if __name__ == '__main__':
                              '* name, required\n'
                              '* priority, required, integer\n'
                              '* descr\n')
+
+    # Resource access
     parser.add_argument('--login', action='store_true',
                         help='Login volumes (implied by --mount)')
-    parser.add_argument('--logout', action='store_true',
-                        help='Logout volumes (implied by --unmount)')
     parser.add_argument('--mount', action='store_true',
                         help='Mount volumes, (implies --login)')
-    parser.add_argument('--unmount', action='store_true',
-                        help='Unmount volumes only.  Does not delete volume')
     parser.add_argument('--force-initiator-creation', action='store_true',
                         help='Force initiator creation. WARNING: This might'
                              ' result in I/O interruption to volumes attached'
                              ' to inherited initiator')
-    parser.add_argument('--clean', action='store_true',
-                        help='Deletes volumes (implies --unmount and '
-                             '--logout)')
-    parser.add_argument('--workers', default=5, type=int,
-                        help='Number of worker threads for this action')
-    parser.add_argument('--no-multipath', action='store_true')
     parser.add_argument('--fstype', default='xfs',
                         help='Filesystem to use when formatting devices')
     parser.add_argument('--fsargs', default='',
@@ -301,6 +302,18 @@ if __name__ == '__main__':
                                 ' the args you are passing in'))
     parser.add_argument('--directory', default='/mnt',
                         help='Directory under which to mount devices')
+    parser.add_argument('--no-multipath', action='store_true')
+
+    # Resource removal
+    parser.add_argument('--logout', action='store_true',
+                        help='Logout volumes (implied by --unmount)')
+    parser.add_argument('--unmount', action='store_true',
+                        help='Unmount volumes only.  Does not delete volume')
+    parser.add_argument('--clean', action='store_true',
+                        help='Deletes volumes (implies --unmount and '
+                             '--logout)')
+
+    # Load generation (no load is run, just load gen config file creation)
     parser.add_argument('--fio', action='store_true',
                         help='Generate fio workload for mounted/logged-in '
                              'volumes')
@@ -310,6 +323,8 @@ if __name__ == '__main__':
     parser.add_argument('--vdbench', action='store_true',
                         help='Generated vdbench workload for mounted/logged-in'
                              ' volumes')
+
+    # Metrics
     parser.add_argument('--metrics', help=hf(
                         'Run metrics with specified report interval and '
                         'timeout in seconds --metrics 5,60 would get metrics '
@@ -329,12 +344,21 @@ if __name__ == '__main__':
     parser.add_argument('--metrics-out-file', default='metrics-out.json',
                         help='Output file for metrics report.  Use "stdout" to'
                         ' print metrics to STDOUT')
+
+    # Object store helpers
     parser.add_argument('--get-keys', action='store_true',
                         help='Get the object keys for the specified volumes')
+
+    # UDC helpers
     parser.add_argument('--csi-yaml',
                         help='Get UDC config from CSI yaml file.  This makes'
                              ' an assumption that you are running on a k8s'
-                             ' master node')
-    parser.add_argument('id', nargs='?')
+                             ' master node if the CSI yaml file contains'
+                             ' secrets')
+
+    # Misc
+    parser.add_argument('--workers', default=5, type=int,
+                        help='Number of worker threads for this action')
+
     args = parser.parse_args()
     sys.exit(main(args))
