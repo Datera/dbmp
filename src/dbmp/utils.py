@@ -166,7 +166,12 @@ def exe(cmd, fail_ok=False):
     dprint("Running command:", cmd)
     try:
         # Redirect stderr
-        return subprocess.check_output(cmd, shell=True)
+        out = subprocess.check_output(cmd, shell=True)
+        # Py2/3 Compat
+        try:
+            return str(out, "utf-8")
+        except TypeError:
+            return out
     except subprocess.CalledProcessError as e:
         if fail_ok:
             dprint(e)

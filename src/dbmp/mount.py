@@ -183,7 +183,7 @@ def _get_multipath_disk(path):
     # If destination directory is already identified as a multipath device,
     # just return its path
     if sdevice.startswith("dm-"):
-            return path
+        return path
     # Fallback to iterating through all the entries under /sys/block/dm-* and
     # check to see if any have an entry under /sys/block/dm-*/slaves matching
     # the device the symlink was pointing at
