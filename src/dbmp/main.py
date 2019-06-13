@@ -98,7 +98,8 @@ def main(args):
             print("Recieved positive confirmation.  Continuing")
 
     if args.show_at_url:
-        show.at_url(api, args.show_at_url)
+        for url in args.show_at_url:
+            show.at_url(api, url)
         return SUCCESS
 
     for arg in args.list:
@@ -233,7 +234,7 @@ if __name__ == '__main__':
         parents=[tparser], formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('--health', action='store_true',
                         help='Run a quick health check')
-    parser.add_argument('--show-at-url',
+    parser.add_argument('--show-at-url', action='append', default=[],
                         help='Show resource located at url.  Not for use'
                              'with events and alerts.  Use --list for those')
     parser.add_argument('--list', choices=('volumes', 'volumes-detail',
