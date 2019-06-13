@@ -269,7 +269,7 @@ def list_volumes(host, api, vopt, detail):
         try:
             mds = api.app_instance_int_ecosystem_data.get()
             metadata = {md.name: md.data for md in mds}
-        except dat_exceptions.ApiError:
+        except (dat_exceptions.ApiError, dat_exceptions.SdkEndpointNotFound):
             pass
     for ai in sorted(api.app_instances.list(), key=lambda x: x.name):
         if (opts.get('prefix') == 'all' or
