@@ -3,6 +3,7 @@ from __future__ import unicode_literals, print_function, division
 import glob
 import os
 import time
+import sys
 
 from dfs_sdk import exceptions as dat_exceptions
 
@@ -11,6 +12,12 @@ from dbmp.utils import Parallel, exe
 from dbmp.utils import get_hostname, dprint, locker
 
 DEV_TEMPLATE = "/dev/disk/by-path/ip-{ip}:3260-iscsi-{iqn}-lun-{lun}"
+
+# Py 2/3 compat
+try:
+    input = raw_input
+except NameError:
+    pass
 
 
 def clean_mounts(api, vols, directory, workers):
@@ -158,7 +165,22 @@ def _setup_initiator(api, force):
             initiator_obj = api.initiators.create(
                 name=host, id=initiator, force=force)
         except dat_exceptions.ApiInvalidRequestError:
-            initiator_obj = api.initiators.create(name=host, id=initiator)
+            try:
+                initiator_obj = api.initiators.create(name=host, id=initiator)
+            except dat_exceptions.ApiInvalidRequestError as e:
+                if "override this warning" in str(e) and not force:
+                    out = input(
+                            "First initiator within a tenant needs to be "
+                            "force created. Would you like to do so? "
+                            "[Y/n]: ").strip()
+                    if out in ("Y", "y"):
+                        initiator_obj = api.initiators.create(
+                            name=host, id=initiator, force=True)
+                    else:
+                        print("Exiting due to failed initiator creation")
+                        sys.exit(1)
+                else:
+                    raise
     return initiator_obj
 
 
