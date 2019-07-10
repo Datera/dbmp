@@ -2,6 +2,46 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function, division
 
+"""
+Datera Bare Metal Provisioner (DBMP)
+
+This is another simple tool that grew organically as requests came in for
+different features.
+
+At its core, DBMP is intended to be a way to execute complex parallel
+operations on the Datera system from a CLI command.  It also abstracts away the
+AppInstance and StorageInstance in favor of just the Volume in most cases. This
+abstraction can be broken by using the "complex" method of provisioning.
+
+It includes most of the functionality provided by scripts in the
+python-sdk/util folder, but much more than those provide on their own.
+
+Originally I had intended this to be capable of performing remote operations
+such as iSCSI logins and mounts on multiple hosts, and some of the architecture
+(such as Topology) is left over from that original design.  It was scrapped due
+to lack of time.
+
+The meat of DBMP is in the volume lifecycle management.  It makes it trivial
+to spin up hundreds of volumes with specific attributes, login and mount
+each one, then create load generation scripts to run traffic against them.
+Here is an example of such a call.
+
+    $ ./dbmp \
+      --volume prefix=myvol,size=5,placement_mode=single_flash,count=300 \
+      --mount \
+      --fio
+
+You can also run DBMP in an "interactive" mode, which is a simple wizard
+that will let you edit the command being run.  This is useful if you don't
+remember the names of each of the attributes you want to set.
+
+    $ ./dbmp --interactive
+
+The interactive mode is pretty new and untested, so don't expect flawless
+execution.  The interactive flag is parsed in the generated shell wrapper
+script, so don't be confused if you don't see the arg for it in this file.
+"""
+
 import argparse
 import json
 import sys
