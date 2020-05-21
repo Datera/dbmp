@@ -212,7 +212,7 @@ def _print_vol_tree(ai, detail, snodes, metadata):
             else:
                 add = ' '
             print('    |')
-            print('    ∟ {} {} {} {}'.format(
+            print('    \ {} {} {} {}'.format(
                 si.name, si.access.get('iqn'),
                 json.dumps(si.access.get('ips', [])),
                 json.dumps(list(asns))))
@@ -225,13 +225,13 @@ def _print_vol_tree(ai, detail, snodes, metadata):
                     pp = vol['placement_policy']['path']
                 else:
                     pp = vol['placement_mode']
-                print('    {}    ∟ {} {}GB {}-replica {} {}'.format(
+                print('    {}    \ {} {}GB {}-replica {} {}'.format(
                     add, vol.name, vol.size, vol.replica_count, pp,
                     json.dumps(list(vasns))))
                 if metadata.get(ai.name):
                     gap = '             '
                     print('{}|'.format(gap))
-                    print('{}∟ metadata'.format(gap))
+                    print('{}\ metadata'.format(gap))
                     print('{}  --------'.format(gap))
                     md = ["{}  {}: {}".format(gap, k, v)
                           for k, v in metadata[ai.name].items()]
@@ -244,7 +244,7 @@ def _print_tmpl_tree(tmpl, detail):
         sts = tmpl.storage_templates.list()
         for i, st in enumerate(sts):
             print('    |')
-            print('    ∟ {}'.format(st.name))
+            print('    \ {}'.format(st.name))
             for vt in st.volume_templates.list():
                 if i < len(sts) - 1:
                     add = '|'
@@ -255,7 +255,7 @@ def _print_tmpl_tree(tmpl, detail):
                     pp = vt['placement_policy']
                 else:
                     pp = vt['placement_mode']
-                print('    {}   ∟ {} {}GB {}-replica {}'.format(
+                print('    {}   \ {} {}GB {}-replica {}'.format(
                     add, vt.name, vt.size, vt.replica_count, pp))
 
 
