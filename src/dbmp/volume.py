@@ -202,7 +202,7 @@ def _print_vol_tree(ai, detail, snodes, metadata):
     else:
         print(ai.name)
     if detail:
-        sis = ai.storage_instances.list()
+        sis = ai.storage_instances.list(tenant=ai['tenant'])
         for i, si in enumerate(sis):
             asns = map(lambda x: x['path'].split('/')[-1],
                        si.active_storage_nodes)
@@ -216,7 +216,7 @@ def _print_vol_tree(ai, detail, snodes, metadata):
                 si.name, si.access.get('iqn'),
                 json.dumps(si.access.get('ips', [])),
                 json.dumps(list(asns))))
-            for vol in si.volumes.list():
+            for vol in si.volumes.list(tenant=ai['tenant']):
                 vasns = map(lambda x: x['path'].split('/')[-1],
                             vol.active_storage_nodes)
                 vasns = map(lambda x: snodes[x], vasns)
