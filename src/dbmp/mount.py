@@ -188,9 +188,10 @@ def _setup_initiator(api, force):
 def _setup_acl(api, ai, force_init, initiator_path):
     if initiator_path == 'local':
         initiatorObj = _setup_initiator(api, force_init)
-	initiator = initiatorObj.path
+	      initiator = initiatorObj.path
     else:
         initiator = initiator_path
+    #Check to see if the initiator is group to use the right api call
     if re.match(".*groups.*",initiator):
         for si in ai.storage_instances.list():
             try:
@@ -204,6 +205,7 @@ def _setup_acl(api, ai, force_init, initiator_path):
             except dat_exceptions.ApiConflictError:
                 dprint("ACL already registered for {},{}".format(ai.name, si.name))
         dprint("Setting up ACLs for {} targets".format(ai.name))
+
 
 
 def _get_multipath_disk(path):
