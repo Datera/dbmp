@@ -188,7 +188,7 @@ def _setup_initiator(api, force):
 def _setup_acl(api, ai, force_init, initiator_path):
     if initiator_path == 'local':
         initiatorObj = _setup_initiator(api, force_init)
-	      initiator = initiatorObj.path
+	initiator = initiatorObj.path
     else:
         initiator = initiator_path
     #Check to see if the initiator is group to use the right api call
