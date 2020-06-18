@@ -53,13 +53,13 @@ def _unmount(ai_name, si_name, vol_name, directory):
 
 
 def mount_volumes(api, vols, multipath, fs, fsargs, directory, workers,
-                  login_only, force_init):
+                  login_only, force_init, initiator_path):
     funcs, args = [], []
     results = []
     for ai in vols:
         funcs.append(_mount_volume)
         args.append((api, ai, multipath, fs, fsargs, directory, login_only,
-                     results, force_init))
+                     results, force_init, initiator_path))
     if funcs:
         p = Parallel(funcs, args_list=args, max_workers=workers)
         p.run_threads()
@@ -71,8 +71,8 @@ def get_dirname(directory, ai_name, si_name, vol_name):
 
 
 def _mount_volume(api, ai, multipath, fs, fsargs, directory, login_only,
-                  results, force_init):
-    _setup_acl(api, ai, force_init)
+                  results, force_init, initiator_path):
+    _setup_acl(api, ai, force_init, initiator_path)
     ai.set(admin_state='online')
     for si in ai.storage_instances.list():
         _si_poll(si)
@@ -184,14 +184,25 @@ def _setup_initiator(api, force):
     return initiator_obj
 
 
-def _setup_acl(api, ai, force_init):
-    initiator = _setup_initiator(api, force_init)
-    for si in ai.storage_instances.list():
-        try:
-            si.acl_policy.initiators.add(initiator.path)
-        except dat_exceptions.ApiConflictError:
-            dprint("ACL already registered for {},{}".format(ai.name, si.name))
-    dprint("Setting up ACLs for {} targets".format(ai.name))
+def _setup_acl(api, ai, force_init, initiator_path):
+    if initiator_path == 'local':
+        initiatorObj = _setup_initiator(api, force_init)
+	initiator = initiatorObj.path
+    else:
+        initiator = initiator_path
+    if re.match("groups",initiator):
+        for si in ai.storage_instances.list():
+            try:
+                si.acl_policy.initiators_groups.add(initiator)
+            except dat_exceptions.ApiConflictError:
+                dprint("ACL Group already registered for {},{}".format(ai.name, si.name))
+    else:
+        for si in ai.storage_instances.list():
+            try:
+                si.acl_policy.initiators.add(initiator)
+            except dat_exceptions.ApiConflictError:
+                dprint("ACL already registered for {},{}".format(ai.name, si.name))
+        dprint("Setting up ACLs for {} targets".format(ai.name))
 
 
 def _get_multipath_disk(path):

@@ -227,7 +227,7 @@ def main(args):
         dev_or_folders = mount_volumes(
             api, vols, not args.no_multipath, args.fstype, args.fsargs,
             args.directory, args.workers, login_only,
-            args.force_initiator_creation)
+            args.force_initiator_creation, args.initiator_path)
 
     # Generate fio/vdbench output
     if args.fio:
@@ -324,12 +324,13 @@ if __name__ == '__main__':
                              '* name, required\n'
                              '* priority, required, integer\n'
                              '* descr\n')
-
     # Resource access
     parser.add_argument('--login', action='store_true',
                         help='Login volumes (implied by --mount)')
     parser.add_argument('--mount', action='store_true',
                         help='Mount volumes, (implies --login)')
+    parser.add_argument('--initiator-path', default='local',
+                        help='Supports the following param\n')
     parser.add_argument('--force-initiator-creation', action='store_true',
                         help='Force initiator creation. WARNING: This might'
                              ' result in I/O interruption to volumes attached'
