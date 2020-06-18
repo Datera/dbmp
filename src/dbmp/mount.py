@@ -190,12 +190,20 @@ def _setup_acl(api, ai, force_init, initiator_path):
 	initiator = initiatorObj.path
     else:
         initiator = initiator_path
-    for si in ai.storage_instances.list():
-        try:
-            si.acl_policy.initiators.add(initiator)
-        except dat_exceptions.ApiConflictError:
-            dprint("ACL already registered for {},{}".format(ai.name, si.name))
-    dprint("Setting up ACLs for {} targets".format(ai.name))
+    if re.match("groups",initiator):
+        for si in ai.storage_instances.list():
+            try:
+                si.acl_policy.initiators_groups.add(initiator)
+            except dat_exceptions.ApiConflictError:
+                dprint("ACL Group already registered for {},{}".format(ai.name, si.name))
+    else:
+        for si in ai.storage_instances.list():
+            try:
+                si.acl_policy.initiators.add(initiator)
+            except dat_exceptions.ApiConflictError:
+                dprint("ACL already registered for {},{}".format(ai.name, si.name))
+        dprint("Setting up ACLs for {} targets".format(ai.name))
+
 
 
 def _get_multipath_disk(path):
