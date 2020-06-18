@@ -205,6 +205,7 @@ def _setup_acl(api, ai, force_init, initiator_path):
         dprint("Setting up ACLs for {} targets".format(ai.name))
 
 
+
 def _get_multipath_disk(path):
     # Follow link to destination directory
     try:
