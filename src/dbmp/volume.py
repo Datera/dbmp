@@ -311,7 +311,7 @@ def _create_volume(hostname, api, opts, i, results):
                 name=VOL_NAME,
                 replica_count=opts['replica'],
                 size=opts['size'],
-                placement_policy={'path': '/placement_policy/{}'.format(
+                placement_policy={'path': '/placement_policies/{}'.format(
                     opts['placement_policy'])})
         qos = opts['qos']
         if qos:
